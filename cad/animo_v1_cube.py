@@ -152,8 +152,25 @@ sw_w, sw_h = 9.0, 4.0      # mm — slide switch opening
 BOARDS = [("Esp32",   4.15, 26.65,   7.5, 25.5, 4.5),   # ESP32-C3 SuperMini, USB +X
           ("Charger", 0.65, 26.65, -21.7, -4.7, 4.5),   # TP4056 USB-C, USB +X
           ("Boost", -26.5, -6.5,  -24.5,  0.5, 6.0),    # 5 V 3 A boost
-          ("Switch", 22.5, 26.9,   -4.3,  4.3, 5.0)]    # slide switch on the +X wall
+          ("Switch", 22.5, 26.9,   -2.9,  5.7, 5.0)]    # slide switch on the +X wall
+# (the switch shares a cradle wall with the charger and the ESP32 either side)
 battery = (50.0, 34.0, 10.0)   # 103450 LiPo 1S, ~1800 mAh, under the lid
+# Holding them, no screws, no glue: each board drops into a CRADLE on the
+# floor (a low wall round its outline, a ledge it rests on, two snap lips on
+# its long sides); its USB end butts the box wall, which is why that side of
+# the cradle is open. The battery sits in a FRAME under the lid, on a strip
+# of double-sided foam tape, and comes out with the lid.
+pcb_t      = 1.0    # mm — board thickness (MEASURE the real ones)
+cradle_w   = 1.2    # mm — cradle wall
+cradle_clr = 0.3    # mm — board to cradle wall
+ledge_w    = 1.0    # mm — the ledge the board rests on, inside the wall
+lip        = 0.4    # mm — snap lip overhang over the board's edge
+lip_h      = 0.8    # mm
+comp_inset = 0.6    # mm — components keep this far from the long edges
+frame_h    = 6.0    # mm — battery frame depth under the lid
+frame_t    = 1.2    # mm
+frame_clr  = 0.4    # mm
+tape_t     = 0.5    # mm — foam tape between battery and lid
 
 EXPORT_STL = True
 RUN_CHECKS = None   # None: checks when headless, skipped in the GUI
@@ -492,7 +509,7 @@ def make_brain_base(deck):
     bosses = [box(*sorted((sx * (b_in - lid_boss), sx * b_in + sx * 0.01)),
                   *sorted((sy * (b_in - lid_boss), sy * b_in + sy * 0.01)),
                   y_wo - 0.01, z_lid0) for sx, sy in LID_CORNERS]
-    b = b.fuse([shell] + bosses).removeSplitter()
+    b = b.fuse([shell] + bosses + make_cradles()).removeSplitter()
     for sx, sy in LID_CORNERS:
         b = b.cut(cyl_z(sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in),
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
@@ -509,9 +526,43 @@ def make_brain_base(deck):
     return b
 
 
+def make_cradles():
+    """One cradle per board: wall, ledge and two snap lips; the side toward
+    the box wall stays open (the board's USB end butts that wall)."""
+    zf = y_wo - 0.01                       # the floor
+    z_pcb1 = y_wo + standoff + pcb_t       # board's top face
+    out = []
+    for name, x0, x1, y0, y1, h in BOARDS:
+        c = cradle_clr
+        open_px = x1 > b_in - 1.0          # against the +X wall
+        open_mx = x0 < -b_in + 1.0         # against the -X wall
+        X0 = max(x0 - c - cradle_w, -b_in + 0.01)
+        X1 = min(x1 + c + cradle_w, b_in - 0.01)
+        wall = box(X0, X1, y0 - c - cradle_w, y1 + c + cradle_w, zf, z_pcb1 + lip_h)
+        wall = wall.cut(box(x0 - c, x1 + c, y0 - c, y1 + c, zf - 1, z_pcb1 + lip_h + 1))
+        if open_px:
+            wall = wall.cut(box(x1, b_in + 1, y0 - c, y1 + c, zf - 1, z_pcb1 + 5))
+        if open_mx:
+            wall = wall.cut(box(-b_in - 1, x0, y0 - c, y1 + c, zf - 1, z_pcb1 + 5))
+        ledge = box(x0 - c, x1 + c, y0 - c, y1 + c, zf, y_wo + standoff).cut(
+            box(x0 + ledge_w, x1 - ledge_w, y0 + ledge_w, y1 - ledge_w,
+                zf - 1, y_wo + standoff + 1))
+        lips = [box(x0 + 2.0, x1 - 2.0, y0 - c - 0.01, y0 + lip, z_pcb1, z_pcb1 + lip_h),
+                box(x0 + 2.0, x1 - 2.0, y1 - lip, y1 + c + 0.01, z_pcb1, z_pcb1 + lip_h)]
+        out.append(wall.fuse([ledge] + lips))
+    return out
+
+
 def make_brain_lid():
-    """Flat lid, the top stacking face: two countersunk M3 into the bosses."""
+    """Flat lid, the top stacking face: two countersunk M3 into the bosses,
+    and the battery's frame underneath."""
     l = box(-y_wo, y_wo, -y_wo, y_wo, z_lid0, z_top)
+    L, W, H = battery
+    fx, fy = L / 2 + frame_clr, W / 2 + frame_clr
+    frame = box(-fx - frame_t, fx + frame_t, -fy - frame_t, fy + frame_t,
+                z_lid0 - frame_h, z_lid0 + 0.01).cut(
+        box(-fx, fx, -fy, fy, z_lid0 - frame_h - 1, z_lid0 + 1))
+    l = l.fuse(frame).removeSplitter()
     for sx, sy in LID_CORNERS:
         x, y = sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in)
         l = l.cut(cyl_z(x, y, m3_clear / 2.0, z_lid0 - 1, z_top + 1))
@@ -521,13 +572,20 @@ def make_brain_lid():
 
 
 def make_boards():
+    """Board envelopes: the PCB, and its components kept off the long edges
+    (where the cradle's lips reach over)."""
     zb = y_wo + standoff
-    return [(n, box(x0, x1, y0, y1, zb, zb + h)) for n, x0, x1, y0, y1, h in BOARDS]
+    out = []
+    for n, x0, x1, y0, y1, h in BOARDS:
+        pcb = box(x0, x1, y0, y1, zb, zb + pcb_t)
+        comp = box(x0, x1, y0 + comp_inset, y1 - comp_inset, zb + pcb_t - 0.01, zb + h)
+        out.append((n, pcb.fuse(comp).removeSplitter()))
+    return out
 
 
 def make_battery():
     L, W, H = battery
-    return box(-L / 2, L / 2, -W / 2, W / 2, z_lid0 - 0.5 - H, z_lid0 - 0.5)
+    return box(-L / 2, L / 2, -W / 2, W / 2, z_lid0 - tape_t - H, z_lid0 - tape_t)
 
 
 # Gear phases: servo gear arbitrary, the rest follow the mesh.
@@ -626,6 +684,7 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("Horn", "ServoGear"),         # horn in its pocket
            ("DeckBottom", "BrainBase"),    # columns land on the other deck
            ("BrainBase", "BrainLid"),      # lid on its bosses
+           ("Battery", "BrainLid"),        # taped into its frame
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
            ("Magnet", "Wall")}
@@ -733,7 +792,9 @@ if RUN_CHECKS:
     print("    ESP32-C3 SuperMini, TP4056 USB-C, 5 V 3 A boost, slide switch on the floor;")
     print(f"    LiPo {battery[0]:.0f}x{battery[1]:.0f}x{battery[2]:.0f} under the lid;"
           f" cables up a {cable_hole:.0f} mm hole; USB-C x2 + switch on the +X side")
-    print("  OPEN: board mounting (standoffs/clips), battery retention, wiring")
+    print("    boards snap into cradles on the floor; the battery hangs in a frame under")
+    print("    the lid on foam tape. MEASURE the real boards (outline, PCB, USB position)")
+    print("  OPEN: wiring")
     print("=" * 72)
 else:
     print(f"Animo v1: geometry only, checks skipped. Cube side {2 * y_wo:.1f} mm")
