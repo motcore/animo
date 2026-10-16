@@ -690,8 +690,8 @@ for _obj in list(doc.Objects):
         continue
     _w = _obj.Name.rsplit("_", 1)[-1] if "_" in _obj.Name else ""
     _label = WALL_LABEL.get(_w, "Marco")
-    if _obj.Name.startswith(("Brain", "Esp32", "Charger", "Boost", "Switch",
-                             "Battery")):
+    if _obj.Name.startswith(("Brain", "Switch", "Battery")
+                            + tuple(b[0] for b in BOARDS)):
         _label = "Cerebro"
     if _label not in _groups:
         _groups[_label] = doc.addObject("App::DocumentObjectGroup",
