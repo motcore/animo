@@ -127,9 +127,9 @@ m3_pilot   = 2.5    # mm — M3 self-tapping pilot
 m3_clear   = 3.3    # mm
 
 # ── Model magnets on the outer face, flush ──────────────────────────────────
-loc_in     = 4.5    # mm — magnet centre in from the plate's edge
-mag_d, mag_h = 4.0, 2.0    # disc magnet, flush with the face
-mag_hole   = 4.2    # mm — press-ish (holes print ~0.2 small)
+mag_d, mag_h = 6.0, 2.0    # disc magnet N52, flush with the face (user: 6 x 2)
+mag_hole   = 6.2    # mm — press-ish (holes print ~0.2 small)
+loc_in     = mag_d / 2.0 + 2.5   # mm — magnet centre in from the plate's edge
 mag_back   = 1.5    # mm — wall left behind each magnet (a boss inside)
 
 # ── Servo mounting posts (from the wall plate down to the tabs) ─────────────
