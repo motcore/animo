@@ -376,7 +376,8 @@ def make_horn():
 
 def make_servo_gear():
     """Servo gear, with the horn's shape as a pocket right through it.
-    Printed flat, the side away from the servo down."""
+    Printed flat, the SERVO side down (its floor with the spline hole on the
+    bed, the boss up), so the horn's pocket opens upward."""
     g = make_gear(S_xz[0], S_xz[1], PH_S, y_g0, y_g1)
     if y_sg1 > y_g1:
         g = g.fuse(cyl_y(x_sv, 0.0, sg_boss_r, y_g1 - 0.01, y_sg1)).removeSplitter()
