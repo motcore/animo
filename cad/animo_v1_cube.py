@@ -175,7 +175,7 @@ comp_inset = 0.6    # mm — components keep this far from the long edges
 frame_h    = 6.0    # mm — battery frame depth under the lid
 frame_t    = 1.2    # mm
 frame_clr  = 0.4    # mm
-tape_t     = 0.5    # mm — foam tape between battery and lid
+tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amazon B0CGRCD27D)
 
 EXPORT_STL = True
 RUN_CHECKS = None   # None: checks when headless, skipped in the GUI
