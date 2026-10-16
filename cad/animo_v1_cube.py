@@ -136,21 +136,27 @@ mag_back   = 1.5    # mm — wall left behind each magnet (a boss inside)
 post_gap   = 0.3    # mm — post to the servo case's end
 post_step  = 4.0    # mm — height of the lower post's step under the gear
 
-# ── The brain: a half cube that REPLACES the top deck ───────────────────────
-# Its floor is the deck itself (grooves, columns, screws); on it a box with
-# the electronics, closed by a flat lid (the top stacking face). Cube + brain
-# stand 1.5 cubes tall. Board sizes are their listed outlines — envelopes.
-cable_hole = 12.0   # mm — square hole through every deck, over the pack's hole
+# ── The brain: a half cube of its own, sitting on the closed cube ───────────
+# The cube is closed by its two identical decks; the brain is a separate box
+# (floor, walls, flat lid — the top stacking face) on the top deck. Two M3x12
+# cap screws through the brain's floor and the top deck, into the bottom
+# deck's columns, replace the top deck's two countersunk screws. Cube + brain
+# stand 1.5 cubes tall. Connectors between cubes: not yet.
+# The cable passage: through every deck and the brain's floor, off-centre in
+# X so the boards' cradles clear it, symmetric in Y so both decks match.
+cable_hole = (-7.0, -0.5, -5.0, 5.0)   # mm — x0, x1, y0, y1, inside the pack's hole
 brain_wall = 2.0    # mm — the brain box's side walls
+brain_floor = 2.0   # mm — it rests on the deck all over, so thin is fine
+brain_screw_head = 5.5   # mm — M3 cap head, inside the brain
 lid_t      = 3.0    # mm
 lid_boss   = 5.0    # mm — square corner bosses for the lid's two screws
 lid_screw_in = 4.5  # mm — lid screws in from the edges
 standoff   = 2.0    # mm — boards sit this far off the floor
 usb_w, usb_h = 10.0, 4.5   # mm — USB-C opening in the wall (plug overmould)
 # (name, x0, x1, y0, y1, height) on the floor, z from the floor + standoff
-BOARDS = [("Esp32",   4.15, 26.65,   7.5, 25.5, 4.5),   # ESP32-C3 SuperMini, USB +X
-          ("Charger", 0.65, 26.65, -21.7, -4.7, 4.5),   # TP4056 USB-C, USB +X
-          ("Boost", -26.5, -6.5,  -24.5,  0.5, 6.0)]    # 5 V boost
+BOARDS = [("Esp32", 4.15, 26.65, -20.0, -2.0, 4.5),     # ESP32-C3 Mini, USB +X
+          ("Power", 1.65, 26.65,   0.4, 20.4, 6.0)]     # DAOKAI charge + 5 V 2 A boost,
+                                                        # USB +X. 25 x 20 PLACEHOLDER
 # Power switch: a KCD11 mini rocker (3 A — the servos' current goes through
 # it; a mini slide switch is 0.5 A), snapped into a cutout in the +Y wall,
 # lying on its side under the battery. Sizes from listings — MEASURE.
@@ -158,7 +164,7 @@ sw_cut   = (13.5, 9.0)    # mm — panel cutout (along X, along Z)
 sw_body  = (13.2, 8.7, 14.0)   # mm — behind the panel, terminals included
 sw_bezel = (15.2, 10.0, 2.0)   # mm — the face outside the wall
 sw_x     = -11.4               # mm — centre along the +Y wall
-sw_z     = 5.5                 # mm — centre above the floor
+sw_z     = 5.2                 # mm — centre above the floor
 battery = (50.0, 34.0, 10.0)   # 103450 LiPo 1S, ~1800 mAh, under the lid
 # Holding them, no screws, no glue: each board drops into a CRADLE on the
 # floor (a low wall round its outline, a ledge it rests on, two snap lips on
@@ -480,8 +486,7 @@ def make_deck():
                 -half_in - groove_d, -half_in + 0.01)
         g.rotate(ORIGIN, Z_AXIS, rot)
         d = d.cut(g)
-    d = d.cut(box(-cable_hole / 2, cable_hole / 2, -cable_hole / 2, cable_hole / 2,
-                  -y_wo - 1, -half_in + 1))      # cables up to the brain
+    d = d.cut(box(*cable_hole, -y_wo - 1, -half_in + 1))   # cables up to the brain
     for sx, sy in ((1, -1), (-1, 1)):            # countersunk holes
         x, y = sx * cxy, sy * cxy
         d = d.cut(cyl_z(x, y, m3_clear / 2.0, -y_wo - 1, -half_in + 1))
@@ -496,30 +501,36 @@ def deck_top(deck):
     return s
 
 
-# Brain heights: floor = the top deck's plate (z half_in .. y_wo).
-brain_h = 2 * y_wo / 2.0 + wall_t        # half a cube above the walls' tops
-z_top   = half_in + brain_h              # the lid's top face
+# Brain heights: it stands on the top deck's outer face (z = y_wo).
+brain_h = y_wo                           # half a cube
+z_floor = y_wo + brain_floor             # the brain's floor, inside
+z_top   = y_wo + brain_h                 # the lid's top face
 z_lid0  = z_top - lid_t                  # the lid's underside
 b_in    = y_wo - brain_wall              # brain box inside half width
-LID_CORNERS = ((1, -1), (-1, 1))         # the top deck's column corners: free
-                                         # above (its screws are at the others)
+LID_CORNERS = ((1, -1), (-1, 1))         # the top deck's column corners
+FIX_CORNERS = ((1, 1), (-1, -1))         # the top deck's screw corners: the
+                                         # brain's two screws go there
 
 
-def make_brain_base(deck):
-    """The top deck with the brain's box on it: side walls, two lid bosses,
-    openings for the two USB-C plugs and the switch on +X. One printed part,
-    printed with the box's open rim on the bed, the deck's columns standing up."""
-    b = deck_top(deck)
-    shell = box(-y_wo, y_wo, -y_wo, y_wo, y_wo - 0.01, z_lid0).cut(
-        box(-b_in, b_in, -b_in, b_in, y_wo - 1, z_lid0 + 1))
+def make_brain_base():
+    """The brain's box: floor, side walls, two lid bosses, the cradles, the
+    cable passage, the two fixing holes, the USB-C windows (+X) and the
+    switch's cutout (+Y). One printed part, printed floor down."""
+    b = box(-y_wo, y_wo, -y_wo, y_wo, y_wo, z_floor)
+    shell = box(-y_wo, y_wo, -y_wo, y_wo, z_floor - 0.01, z_lid0).cut(
+        box(-b_in, b_in, -b_in, b_in, z_floor - 1, z_lid0 + 1))
     bosses = [box(*sorted((sx * (b_in - lid_boss), sx * b_in + sx * 0.01)),
                   *sorted((sy * (b_in - lid_boss), sy * b_in + sy * 0.01)),
-                  y_wo - 0.01, z_lid0) for sx, sy in LID_CORNERS]
+                  z_floor - 0.01, z_lid0) for sx, sy in LID_CORNERS]
     b = b.fuse([shell] + bosses + make_cradles()).removeSplitter()
+    b = b.cut(box(*cable_hole, y_wo - 1, z_floor + 1))
+    cxy = y_wo - screw_in
+    for sx, sy in FIX_CORNERS:
+        b = b.cut(cyl_z(sx * cxy, sy * cxy, m3_clear / 2.0, y_wo - 1, z_floor + 1))
     for sx, sy in LID_CORNERS:
         b = b.cut(cyl_z(sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in),
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
-    zb = y_wo + standoff
+    zb = z_floor + standoff
     for name, x0, x1, y0, y1, h in BOARDS:
         if x1 < b_in - 1.0:                # only the boards whose USB meets +X
             continue
@@ -527,14 +538,14 @@ def make_brain_base(deck):
         zc = zb + 2.5
         b = b.cut(box(b_in - 1, y_wo + 1, yc - usb_w / 2, yc + usb_w / 2,
                       zc - usb_h / 2, zc + usb_h / 2))
-    zc = y_wo + sw_z                       # the switch's cutout, +Y wall
+    zc = z_floor + sw_z                    # the switch's cutout, +Y wall
     b = b.cut(box(sw_x - sw_cut[0] / 2, sw_x + sw_cut[0] / 2, b_in - 1, y_wo + 1,
                   zc - sw_cut[1] / 2, zc + sw_cut[1] / 2))
     return b
 
 
 def make_switch():
-    zc = y_wo + sw_z
+    zc = z_floor + sw_z
     body = box(sw_x - sw_body[0] / 2, sw_x + sw_body[0] / 2, y_wo - sw_body[2], y_wo,
                zc - sw_body[1] / 2, zc + sw_body[1] / 2)
     bezel = box(sw_x - sw_bezel[0] / 2, sw_x + sw_bezel[0] / 2, y_wo, y_wo + sw_bezel[2],
@@ -545,8 +556,8 @@ def make_switch():
 def make_cradles():
     """One cradle per board: wall, ledge and two snap lips; the side toward
     the box wall stays open (the board's USB end butts that wall)."""
-    zf = y_wo - 0.01                       # the floor
-    z_pcb1 = y_wo + standoff + pcb_t       # board's top face
+    zf = z_floor - 0.01                    # the floor
+    z_pcb1 = z_floor + standoff + pcb_t    # board's top face
     out = []
     for name, x0, x1, y0, y1, h in BOARDS:
         c = cradle_clr
@@ -560,9 +571,9 @@ def make_cradles():
             wall = wall.cut(box(x1, b_in + 1, y0 - c, y1 + c, zf - 1, z_pcb1 + 5))
         if open_mx:
             wall = wall.cut(box(-b_in - 1, x0, y0 - c, y1 + c, zf - 1, z_pcb1 + 5))
-        ledge = box(x0 - c, x1 + c, y0 - c, y1 + c, zf, y_wo + standoff).cut(
+        ledge = box(x0 - c, x1 + c, y0 - c, y1 + c, zf, z_floor + standoff).cut(
             box(x0 + ledge_w, x1 - ledge_w, y0 + ledge_w, y1 - ledge_w,
-                zf - 1, y_wo + standoff + 1))
+                zf - 1, z_floor + standoff + 1))
         lips = [box(x0 + 2.0, x1 - 2.0, y0 - c - 0.01, y0 + lip, z_pcb1, z_pcb1 + lip_h),
                 box(x0 + 2.0, x1 - 2.0, y1 - lip, y1 + c + 0.01, z_pcb1, z_pcb1 + lip_h)]
         out.append(wall.fuse([ledge] + lips))
@@ -590,12 +601,25 @@ def make_brain_lid():
 def make_boards():
     """Board envelopes: the PCB, and its components kept off the long edges
     (where the cradle's lips reach over)."""
-    zb = y_wo + standoff
+    zb = z_floor + standoff
     out = []
     for n, x0, x1, y0, y1, h in BOARDS:
         pcb = box(x0, x1, y0, y1, zb, zb + pcb_t)
         comp = box(x0, x1, y0 + comp_inset, y1 - comp_inset, zb + pcb_t - 0.01, zb + h)
         out.append((n, pcb.fuse(comp).removeSplitter()))
+    return out
+
+
+def make_fix_screws():
+    """The brain's two M3x12 cap screws: head on its floor, shank through the
+    floor and the top deck into the bottom deck's column."""
+    cxy = y_wo - screw_in
+    out = []
+    for sx, sy in FIX_CORNERS:
+        x, y = sx * cxy, sy * cxy
+        head = cyl_z(x, y, brain_screw_head / 2.0, z_floor, z_floor + 3.0)
+        shank = cyl_z(x, y, 1.45, z_floor - 12.0, z_floor + 0.01)
+        out.append(head.fuse(shank))
     return out
 
 
@@ -641,7 +665,10 @@ for wname, rot in WALLS:
         PARTS.append((f"{pname}_{wname}", place(sh, rot), col, tr))
 DECK = make_deck()
 PARTS.append(("DeckBottom", DECK, (0.45, 0.55, 0.75), 60))
-PARTS.append(("BrainBase", make_brain_base(DECK), (0.45, 0.55, 0.75), 60))
+PARTS.append(("DeckTop", deck_top(DECK), (0.45, 0.55, 0.75), 60))
+PARTS.append(("BrainBase", make_brain_base(), (0.30, 0.45, 0.65), 60))
+PARTS += [(f"BrainScrew{i}", sh, (0.35, 0.35, 0.38), 0)
+          for i, sh in enumerate(make_fix_screws())]
 PARTS.append(("BrainLid", make_brain_lid(), (0.45, 0.55, 0.75), 60))
 PARTS += [(n, sh, (0.15, 0.50, 0.25), 0) for n, sh in make_boards()]
 PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 0))
@@ -686,7 +713,7 @@ if EXPORT_STL:
     for _n in ("Wall", "ServoGear", "OutputGear", "OutputHub"):
         _by[_n].exportStl(os.path.join(_pdir, f"animo_v1_{_n}.stl"))
     DECK.exportStl(os.path.join(_pdir, "animo_v1_Deck.stl"))
-    make_brain_base(DECK).exportStl(os.path.join(_pdir, "animo_v1_BrainBase.stl"))
+    make_brain_base().exportStl(os.path.join(_pdir, "animo_v1_BrainBase.stl"))
     make_brain_lid().exportStl(os.path.join(_pdir, "animo_v1_BrainLid.stl"))
 
 # ═══════════════════════════════════════════════════════════════════
@@ -699,7 +726,10 @@ if RUN_CHECKS is None:
 # Pairs that are MEANT to touch or nest (prefix match, same wall).
 ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("Horn", "ServoGear"),         # horn in its pocket
-           ("DeckBottom", "BrainBase"),    # columns land on the other deck
+           ("DeckBottom", "DeckTop"),      # columns land on the other deck
+           ("BrainBase", "DeckTop"),       # the brain sits on the top deck
+           ("BrainScrew", "BrainBase"), ("BrainScrew", "DeckTop"),
+           ("BrainScrew", "DeckBottom"),   # screws through floor and deck
            ("BrainBase", "BrainLid"),      # lid on its bosses
            ("Battery", "BrainLid"),        # taped into its frame
            ("Switch", "BrainBase"),        # snapped into its cutout
@@ -758,9 +788,9 @@ if RUN_CHECKS:
                       ("OutputGear_N", "Wall_N", "> 0"),
                       ("Wall_N", "Servo_E", "> 0, posts"),
                       ("Wall_N", "Wall_E", "> 0, corner"),
-                      ("Servo_N", "BrainBase", "> 0"),
+                      ("Servo_N", "DeckTop", "> 0"),
                       ("Servo_N", "DeckBottom", "> 0"),
-                      ("Servo_E", "BrainBase", "> 0, corner column"),
+                      ("Servo_E", "DeckTop", "> 0, corner column"),
                       ("Servo_W", "DeckBottom", "> 0, corner column")):
         g = gap(a, b)
         checks.append((f"gap {a} / {b}", g, tgt, g > 0.05))
@@ -804,12 +834,13 @@ if RUN_CHECKS:
           f" (wall left there {wall_t - sg_recess:.2f} mm)")
     print(f"  Walls held by a {tongue_t:.1f} x {tongue_h:.1f} tongue top and bottom in"
           " the decks' grooves; open the top deck to swap one")
-    print(f"  BRAIN (replaces the top deck): box {2 * y_wo:.1f} x {2 * y_wo:.1f}, cube + brain"
+    print(f"  BRAIN (its own box, on the top deck, 2 x M3x12 cap): box {2 * y_wo:.1f} x {2 * y_wo:.1f}, cube + brain"
           f" {y_wo + z_top:.1f} tall (1.5 cubes); inside {2 * b_in:.1f} x {2 * b_in:.1f} x"
-          f" {z_lid0 - y_wo:.1f}")
-    print("    ESP32-C3 SuperMini, TP4056 USB-C, 5 V boost on the floor; KCD11 3 A rocker in +Y;")
+          f" {z_lid0 - z_floor:.1f}")
+    print("    ESP32-C3 Mini + charge/5 V boost board (DAOKAI) on the floor; KCD11 3 A in +Y;")
     print(f"    LiPo {battery[0]:.0f}x{battery[1]:.0f}x{battery[2]:.0f} under the lid;"
-          f" cables up a {cable_hole:.0f} mm hole; USB-C x2 on the +X side")
+          f" cables up a {cable_hole[1] - cable_hole[0]:.1f} x {cable_hole[3] - cable_hole[2]:.0f}"
+          " passage; USB-C x2 on the +X side")
     print("    boards snap into cradles on the floor; the battery hangs in a frame under")
     print("    the lid on foam tape. MEASURE the real boards (outline, PCB, USB position)")
     print("  OPEN: wiring")
