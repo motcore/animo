@@ -183,6 +183,28 @@ frame_t    = 1.2    # mm
 frame_clr  = 0.4    # mm
 tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amazon B0CGRCD27D)
 
+# ── Test model: the template every model starts from ────────────────────────
+# A model is two parts: a BASE that the wall's magnets hold (four magnets of
+# its own, facing them — mind the polarity), and a MOVING part that the
+# output turns through a hole in the base. Here the moving part is a plain
+# arm with a pointer, so the D's single position and the 1:1 travel show.
+# The arm's flange sits in a pocket on the base's wall side: put the arm
+# through the base, then the base on the wall.
+mdl_t        = 4.0    # mm — base thickness
+mdl_margin   = 5.0    # mm — base beyond the magnets' centres
+mdl_pocket_d = 17.0   # mm — pocket for the arm's flange (wall side)
+mdl_pocket_h = 1.5    # mm
+mdl_hole_d   = 9.6    # mm — the arm's hub through the base
+arm_flange_d = 16.0   # mm
+arm_flange_t = 1.2    # mm
+arm_gap      = 0.15   # mm — flange off the wall's face
+arm_hub_d    = 9.0    # mm
+male_d       = 5.6    # mm — male D: 0.4 under the socket's 6.0 (holes print
+male_flat    = 4.4    # mm   ~0.2 small, outsides ~0.07 big: ~0.15 left)
+male_len     = 4.2    # mm — into a 4.5 deep socket
+arm_len      = 35.0   # mm — hub centre to the pointer's tip
+arm_w, arm_t = 8.0, 3.0
+
 EXPORT_STL = True
 RUN_CHECKS = None   # None: checks when headless, skipped in the GUI
 
@@ -623,6 +645,43 @@ def make_fix_screws():
     return out
 
 
+def make_model_base():
+    """Test model's base, on the north wall: a plate with four flush magnet
+    holes and the flange's pocket on its wall side, the hub's hole through.
+    Printed wall side down."""
+    h = loc_xz + mdl_margin
+    b = box(-h, h, y_wo, y_wo + mdl_t, -h, h)
+    b = b.cut(cyl_y(0, 0, mdl_pocket_d / 2.0, y_wo - 1, y_wo + mdl_pocket_h))
+    b = b.cut(cyl_y(0, 0, mdl_hole_d / 2.0, y_wo - 1, y_wo + mdl_t + 1))
+    for sx in (1, -1):
+        for sz in (1, -1):
+            b = b.cut(cyl_y(sx * loc_xz, sz * loc_xz, mag_hole / 2.0, y_wo - 1,
+                            y_wo + mag_h))
+    return b
+
+
+def make_model_magnet(sx, sz):
+    return cyl_y(sx * loc_xz, sz * loc_xz, mag_d / 2.0, y_wo, y_wo + mag_h)
+
+
+def make_model_arm():
+    """Test model's moving part: male D, flange, hub through the base, an arm
+    with a pointer. Printed arm flat on the bed (the flange's underside needs
+    a little support)."""
+    yf0 = y_wo + arm_gap
+    yf1 = yf0 + arm_flange_t
+    y_arm0 = y_wo + mdl_t + 0.3
+    y_arm1 = y_arm0 + arm_t
+    flange = cyl_y(0, 0, arm_flange_d / 2.0, yf0, yf1)
+    hub = cyl_y(0, 0, arm_hub_d / 2.0, yf1 - 0.01, y_arm1)
+    lever = box(0, arm_len - arm_w / 2.0, y_arm0, y_arm1, -arm_w / 2.0, arm_w / 2.0)
+    pts = [v(arm_len - arm_w / 2.0, y_arm0, -arm_w / 2.0), v(arm_len, y_arm0, 0),
+           v(arm_len - arm_w / 2.0, y_arm0, arm_w / 2.0)]
+    tip = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(0, arm_t, 0))
+    male = d_bar_y(0, 0, male_d, male_flat, yf0 - male_len, yf0 + 0.01)
+    return flange.fuse([hub, lever, tip, male]).removeSplitter()
+
+
 def make_battery():
     L, W, H = battery
     return box(-L / 2, L / 2, -W / 2, W / 2, z_lid0 - tape_t - H, z_lid0 - tape_t)
@@ -673,6 +732,11 @@ PARTS.append(("BrainLid", make_brain_lid(), (0.45, 0.55, 0.75), 60))
 PARTS += [(n, sh, (0.15, 0.50, 0.25), 0) for n, sh in make_boards()]
 PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 0))
 PARTS.append(("Switch", make_switch(), (0.15, 0.15, 0.15), 0))
+PARTS.append(("ModelBase", make_model_base(), (0.55, 0.75, 0.45), 0))
+PARTS.append(("ModelArm", make_model_arm(), (0.90, 0.45, 0.35), 0))
+PARTS += [(f"ModelMagnet{'P' if sx > 0 else 'M'}{'P' if sz > 0 else 'M'}",
+           make_model_magnet(sx, sz), (0.55, 0.55, 0.60), 0)
+          for sx in (1, -1) for sz in (1, -1)]
 
 DOC_NAME = "Animo_v1"
 if App.ActiveDocument and App.ActiveDocument.Name == DOC_NAME:
@@ -693,6 +757,8 @@ for _obj in list(doc.Objects):
     if _obj.Name.startswith(("Brain", "Switch", "Battery")
                             + tuple(b[0] for b in BOARDS)):
         _label = "Cerebro"
+    if _obj.Name.startswith("Model"):
+        _label = "Modelo de prueba"
     if _label not in _groups:
         _groups[_label] = doc.addObject("App::DocumentObjectGroup",
                                         "G_" + _label.replace(" ", "_"))
@@ -715,6 +781,8 @@ if EXPORT_STL:
     DECK.exportStl(os.path.join(_pdir, "animo_v1_Deck.stl"))
     make_brain_base().exportStl(os.path.join(_pdir, "animo_v1_BrainBase.stl"))
     make_brain_lid().exportStl(os.path.join(_pdir, "animo_v1_BrainLid.stl"))
+    make_model_base().exportStl(os.path.join(_pdir, "animo_v1_ModelBase.stl"))
+    make_model_arm().exportStl(os.path.join(_pdir, "animo_v1_ModelArm.stl"))
 
 # ═══════════════════════════════════════════════════════════════════
 # CHECKS
@@ -733,6 +801,7 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("BrainBase", "BrainLid"),      # lid on its bosses
            ("Battery", "BrainLid"),        # taped into its frame
            ("Switch", "BrainBase"),        # snapped into its cutout
+           ("ModelMagnet", "ModelBase"),   # pressed into the test model
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
            ("Magnet", "Wall")}
@@ -791,6 +860,9 @@ if RUN_CHECKS:
                       ("Servo_N", "DeckTop", "> 0"),
                       ("Servo_N", "DeckBottom", "> 0"),
                       ("Servo_E", "DeckTop", "> 0, corner column"),
+                      ("ModelArm", "OutputHub_N", "> 0, male D in the socket"),
+                      ("ModelArm", "ModelBase", "> 0, arm turns free"),
+                      ("ModelArm", "Wall_N", "> 0"),
                       ("Servo_W", "DeckBottom", "> 0, corner column")):
         g = gap(a, b)
         checks.append((f"gap {a} / {b}", g, tgt, g > 0.05))
