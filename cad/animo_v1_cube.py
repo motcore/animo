@@ -147,13 +147,18 @@ lid_boss   = 5.0    # mm — square corner bosses for the lid's two screws
 lid_screw_in = 4.5  # mm — lid screws in from the edges
 standoff   = 2.0    # mm — boards sit this far off the floor
 usb_w, usb_h = 10.0, 4.5   # mm — USB-C opening in the wall (plug overmould)
-sw_w, sw_h = 9.0, 4.0      # mm — slide switch opening
 # (name, x0, x1, y0, y1, height) on the floor, z from the floor + standoff
 BOARDS = [("Esp32",   4.15, 26.65,   7.5, 25.5, 4.5),   # ESP32-C3 SuperMini, USB +X
           ("Charger", 0.65, 26.65, -21.7, -4.7, 4.5),   # TP4056 USB-C, USB +X
-          ("Boost", -26.5, -6.5,  -24.5,  0.5, 6.0),    # 5 V 3 A boost
-          ("Switch", 22.5, 26.9,   -2.9,  5.7, 5.0)]    # slide switch on the +X wall
-# (the switch shares a cradle wall with the charger and the ESP32 either side)
+          ("Boost", -26.5, -6.5,  -24.5,  0.5, 6.0)]    # 5 V boost
+# Power switch: a KCD11 mini rocker (3 A — the servos' current goes through
+# it; a mini slide switch is 0.5 A), snapped into a cutout in the +Y wall,
+# lying on its side under the battery. Sizes from listings — MEASURE.
+sw_cut   = (13.5, 9.0)    # mm — panel cutout (along X, along Z)
+sw_body  = (13.2, 8.7, 14.0)   # mm — behind the panel, terminals included
+sw_bezel = (15.2, 10.0, 2.0)   # mm — the face outside the wall
+sw_x     = -11.4               # mm — centre along the +Y wall
+sw_z     = 5.5                 # mm — centre above the floor
 battery = (50.0, 34.0, 10.0)   # 103450 LiPo 1S, ~1800 mAh, under the lid
 # Holding them, no screws, no glue: each board drops into a CRADLE on the
 # floor (a low wall round its outline, a ledge it rests on, two snap lips on
@@ -515,15 +520,25 @@ def make_brain_base(deck):
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
     zb = y_wo + standoff
     for name, x0, x1, y0, y1, h in BOARDS:
-        if name == "Switch":
-            w_, h_ = sw_w, sw_h
-        else:
-            w_, h_ = usb_w, usb_h
+        if x1 < b_in - 1.0:                # only the boards whose USB meets +X
+            continue
         yc = (y0 + y1) / 2.0
-        zc = zb + (h / 2.0 if name == "Switch" else 2.5)
-        b = b.cut(box(b_in - 1, y_wo + 1, yc - w_ / 2, yc + w_ / 2,
-                      zc - h_ / 2, zc + h_ / 2))
+        zc = zb + 2.5
+        b = b.cut(box(b_in - 1, y_wo + 1, yc - usb_w / 2, yc + usb_w / 2,
+                      zc - usb_h / 2, zc + usb_h / 2))
+    zc = y_wo + sw_z                       # the switch's cutout, +Y wall
+    b = b.cut(box(sw_x - sw_cut[0] / 2, sw_x + sw_cut[0] / 2, b_in - 1, y_wo + 1,
+                  zc - sw_cut[1] / 2, zc + sw_cut[1] / 2))
     return b
+
+
+def make_switch():
+    zc = y_wo + sw_z
+    body = box(sw_x - sw_body[0] / 2, sw_x + sw_body[0] / 2, y_wo - sw_body[2], y_wo,
+               zc - sw_body[1] / 2, zc + sw_body[1] / 2)
+    bezel = box(sw_x - sw_bezel[0] / 2, sw_x + sw_bezel[0] / 2, y_wo, y_wo + sw_bezel[2],
+                zc - sw_bezel[1] / 2, zc + sw_bezel[1] / 2)
+    return body.fuse(bezel)
 
 
 def make_cradles():
@@ -629,6 +644,7 @@ PARTS.append(("BrainBase", make_brain_base(DECK), (0.45, 0.55, 0.75), 60))
 PARTS.append(("BrainLid", make_brain_lid(), (0.45, 0.55, 0.75), 60))
 PARTS += [(n, sh, (0.15, 0.50, 0.25), 0) for n, sh in make_boards()]
 PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 0))
+PARTS.append(("Switch", make_switch(), (0.15, 0.15, 0.15), 0))
 
 DOC_NAME = "Animo_v1"
 if App.ActiveDocument and App.ActiveDocument.Name == DOC_NAME:
@@ -685,6 +701,7 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("DeckBottom", "BrainBase"),    # columns land on the other deck
            ("BrainBase", "BrainLid"),      # lid on its bosses
            ("Battery", "BrainLid"),        # taped into its frame
+           ("Switch", "BrainBase"),        # snapped into its cutout
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
            ("Magnet", "Wall")}
@@ -789,9 +806,9 @@ if RUN_CHECKS:
     print(f"  BRAIN (replaces the top deck): box {2 * y_wo:.1f} x {2 * y_wo:.1f}, cube + brain"
           f" {y_wo + z_top:.1f} tall (1.5 cubes); inside {2 * b_in:.1f} x {2 * b_in:.1f} x"
           f" {z_lid0 - y_wo:.1f}")
-    print("    ESP32-C3 SuperMini, TP4056 USB-C, 5 V 3 A boost, slide switch on the floor;")
+    print("    ESP32-C3 SuperMini, TP4056 USB-C, 5 V boost on the floor; KCD11 3 A rocker in +Y;")
     print(f"    LiPo {battery[0]:.0f}x{battery[1]:.0f}x{battery[2]:.0f} under the lid;"
-          f" cables up a {cable_hole:.0f} mm hole; USB-C x2 + switch on the +X side")
+          f" cables up a {cable_hole:.0f} mm hole; USB-C x2 on the +X side")
     print("    boards snap into cradles on the floor; the battery hangs in a frame under")
     print("    the lid on foam tape. MEASURE the real boards (outline, PCB, USB position)")
     print("  OPEN: wiring")
