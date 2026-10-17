@@ -77,9 +77,8 @@ horn_arm_len = 9.0    # mm — tip to tip, CUT to this (the gear's root is Ø12.
 horn_lift    = 1.5    # mm — the hub's underside above the tower: ~1.5, "maybe a
                       #      bit less" (can't get the caliper in). The cube follows it
 horn_grow    = 0.2    # mm — pocket over the horn's ARMS (holes print ~0.2 small)
-horn_hub_grow = 0.4   # mm — pocket over its hub: generous, the arms key it. The
-                      #      hub tapers (moulding draft) and 0.2 bottomed out
-                      #      on the first print, 2026-10-17
+horn_hub_grow = 0.2   # mm — pocket over its hub: a PRESS fit — it needs a firm
+                      #      push and then seats perfectly (tested 2026-10-17)
 
 # ── Gears: two identical spur gears per wall, 1:1 ───────────────────────────
 g_mod   = 0.8    # mm — module (prints with a 0.4 nozzle)
