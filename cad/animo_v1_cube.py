@@ -172,37 +172,40 @@ brain_screw_head = 5.5   # mm — M3 cap head, inside the brain
 lid_t      = 3.0    # mm
 lid_boss   = 5.0    # mm — square corner bosses for the lid's two screws
 lid_screw_in = 4.5  # mm — lid screws in from the edges
-usb_win = (12.5, 7.0)   # mm — window for a USB-C PLUG's overmould (W x H): the
-                        #      plug has to reach the receptacle through the wall
+# The brain's four sides are plain (user, 2026-10-17): the switch and the
+# charging socket sit in the LID, wired with some slack; the ESP32's own
+# USB-C stays inside — it is only for the first flashing, lid off, and points
+# into the open floor so a cable can reach it; after that, programs and
+# updates come over the air.
 # The boards, measured 2026-10-17 (calliper +0.04). x0..x1, y0..y1 is the PCB;
 # lift = PCB underside above the floor; h = top of the tallest part above the
 # PCB's underside; open = cradle sides left open; usb = (width, overhang past
-# the PCB edge, centre above the PCB's underside) of a USB-C on the +X edge.
+# the PCB edge, centre above the PCB's underside) of a USB-C on the -X edge.
 BOARDS = [
-    dict(name="Esp32",                     # ESP32-C3 Mini (SuperMini)
-         x=(2.85, 24.85), y=(-20.0, -1.8), pcb=0.9, lift=2.0, h=4.0,
-         lips=True, open=("+x",), usb=(8.9, 1.9, 2.0)),
+    dict(name="Esp32",                     # ESP32-C3 Mini (SuperMini), its
+         x=(4.0, 26.0), y=(-20.0, -1.8),   # USB-C on the -x end, inward
+         pcb=0.9, lift=2.0, h=4.0,
+         lips=True, open=("-x",), usb=(8.9, 1.9, 2.0)),
     dict(name="Power",                     # DAOKAI: charge + 5 V 2 A boost. No
          x=(-15.0, 10.0), y=(6.6, 22.6),  # USB: charging comes in on its VIN
          pcb=1.6, lift=3.0, h=6.1,         # pad. Only 0.4 clear by its long
          lips=False, open=("-y",), usb=None),   # edges, so no lips: it sits on
 ]                                          # a 3 mm foam pad (the lift). Its
                                            # side button (1 mm proud) is on -y
+# Both live in the lid, one in each of the strips the battery leaves along
+# its long sides (between the battery rails and the box walls).
 # The charging socket: a panel-mount USB-C with two wires (LYMISPIYA) into
-# the DAOKAI's VIN/GND, in the +X wall beside the ESP32's. PLACEHOLDER sizes
-# until it arrives — MEASURE.
-chg_y, chg_z = 14.0, 6.0             # mm — centre on the +X wall; z above the floor
-chg_cut  = (9.4, 3.8)                # mm — panel cutout (Y x Z) PLACEHOLDER
-chg_body = (12.0, 7.0, 12.0)         # mm — inside the wall: Y, Z, depth PLACEHOLDER
+# the DAOKAI's VIN/GND. PLACEHOLDER sizes until it arrives — MEASURE.
+chg_xy   = (0.0, -22.6)              # mm — centre in the lid
+chg_cut  = (9.4, 3.8)                # mm — lid cutout (X x Y) PLACEHOLDER
+chg_body = (12.0, 7.0, 12.0)         # mm — under the lid's top: X, Y, depth PLACEHOLDER
 # Power switch: KCD11 mini rocker (3 A — the servos' current goes through it),
-# snapped into a cutout in the -X wall, lying under the battery. Measured
-# 2026-10-17: bezel 15.12 x 10.50, body 13.10 x 8.40, 17.6 from the bezel's
-# face to the lugs.
-sw_cut   = (13.5, 9.0)    # mm — panel cutout (along Y, along Z): ~0.2 a side
-sw_body  = (13.1, 8.4, 15.6)   # mm — behind the bezel (wall included), lugs and all
-sw_bezel = (15.12, 10.5, 2.0)  # mm — the face outside the wall
-sw_y     = -8.0                # mm — centre along the -X wall
-sw_z     = 5.2                 # mm — centre above the floor
+# snapped into a cutout in the lid. Measured 2026-10-17: bezel 15.12 x 10.50,
+# body 13.10 x 8.40, 17.6 from the bezel's face to the lugs.
+sw_cut   = (13.5, 9.0)    # mm — lid cutout (X x Y): ~0.2 a side
+sw_body  = (13.1, 8.4, 15.6)   # mm — under the lid's top, lugs and all
+sw_bezel = (15.12, 10.5, 2.0)  # mm — the face on top of the lid
+sw_xy    = (0.0, 22.6)         # mm — centre in the lid
 battery = (52.0, 33.55, 10.24)  # CITYORK 103450 2000 mAh, measured: too long for
                                 # an end frame — the brain's walls stop its ends
 # Holding them: each board drops into a CRADLE on the floor (a low wall
@@ -631,9 +634,9 @@ FIX_CORNERS = ((1, 1), (-1, -1))         # the top deck's screw corners: the
 
 
 def make_brain_base():
-    """The brain's box: floor, side walls, two lid bosses, the cradles, the
-    cable passage, the two fixing holes, the USB-C windows (+X) and the
-    switch's cutout (+Y). One printed part, printed floor down."""
+    """The brain's box: floor, plain side walls, two lid bosses, the cradles,
+    the cable passage and the two fixing holes. One printed part, printed
+    floor down."""
     b = box(-y_wo, y_wo, -y_wo, y_wo, y_wo, z_floor)
     shell = box(-y_wo, y_wo, -y_wo, y_wo, z_floor - 0.01, z_lid0).cut(
         box(-b_in, b_in, -b_in, b_in, z_floor - 1, z_lid0 + 1))
@@ -648,34 +651,21 @@ def make_brain_base():
     for sx, sy in LID_CORNERS:
         b = b.cut(cyl_z(sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in),
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
-    for bd in BOARDS:                      # USB-C plug windows, +X wall
-        if not bd["usb"]:
-            continue
-        yc = sum(bd["y"]) / 2.0
-        zc = z_floor + bd["lift"] + bd["usb"][2]
-        b = b.cut(box(b_in - 1, y_wo + 1, yc - usb_win[0] / 2, yc + usb_win[0] / 2,
-                      zc - usb_win[1] / 2, zc + usb_win[1] / 2))
-    zc = z_floor + chg_z                   # the charging socket, +X wall
-    b = b.cut(box(b_in - 1, y_wo + 1, chg_y - chg_cut[0] / 2, chg_y + chg_cut[0] / 2,
-                  zc - chg_cut[1] / 2, zc + chg_cut[1] / 2))
-    zc = z_floor + sw_z                    # the switch's cutout, -X wall
-    b = b.cut(box(-y_wo - 1, -b_in + 1, sw_y - sw_cut[0] / 2, sw_y + sw_cut[0] / 2,
-                  zc - sw_cut[1] / 2, zc + sw_cut[1] / 2))
     return b
 
 
 def make_charge_port():
-    zc = z_floor + chg_z
-    return box(b_in - chg_body[2], y_wo, chg_y - chg_body[0] / 2, chg_y + chg_body[0] / 2,
-               zc - chg_body[1] / 2, zc + chg_body[1] / 2)
+    x, y = chg_xy
+    return box(x - chg_body[0] / 2, x + chg_body[0] / 2, y - chg_body[1] / 2,
+               y + chg_body[1] / 2, z_top - chg_body[2], z_top)
 
 
 def make_switch():
-    zc = z_floor + sw_z
-    body = box(-y_wo, -y_wo + sw_body[2], sw_y - sw_body[0] / 2, sw_y + sw_body[0] / 2,
-               zc - sw_body[1] / 2, zc + sw_body[1] / 2)
-    bezel = box(-y_wo - sw_bezel[2], -y_wo, sw_y - sw_bezel[0] / 2, sw_y + sw_bezel[0] / 2,
-                zc - sw_bezel[1] / 2, zc + sw_bezel[1] / 2)
+    x, y = sw_xy
+    body = box(x - sw_body[0] / 2, x + sw_body[0] / 2, y - sw_body[1] / 2,
+               y + sw_body[1] / 2, z_top - sw_body[2], z_top)
+    bezel = box(x - sw_bezel[0] / 2, x + sw_bezel[0] / 2, y - sw_bezel[1] / 2,
+                y + sw_bezel[1] / 2, z_top, z_top + sw_bezel[2])
     return body.fuse(bezel)
 
 
@@ -712,8 +702,9 @@ def make_cradles():
 
 
 def make_brain_lid():
-    """Flat lid, the top stacking face: two countersunk M3 into the bosses,
-    and the battery's frame underneath."""
+    """The lid: the switch's and the charging socket's cutouts, two
+    countersunk M3 into the bosses, the battery's rails underneath. Printed
+    top face down."""
     l = box(-y_wo, y_wo, -y_wo, y_wo, z_lid0, z_top)
     L, W, H = battery
     fy = W / 2 + frame_clr                 # two rails along its long sides; its
@@ -722,6 +713,12 @@ def make_brain_lid():
              box(-L / 2 + 3, L / 2 - 3, -fy - frame_t, -fy,             # box walls
                  z_lid0 - frame_h, z_lid0 + 0.01) for sy in (1, -1)]
     l = l.fuse(rails).removeSplitter()
+    x, y = sw_xy                           # the switch, snapped in from above
+    l = l.cut(box(x - sw_cut[0] / 2, x + sw_cut[0] / 2, y - sw_cut[1] / 2,
+                  y + sw_cut[1] / 2, z_lid0 - 1, z_top + 1))
+    x, y = chg_xy                          # the charging socket
+    l = l.cut(box(x - chg_cut[0] / 2, x + chg_cut[0] / 2, y - chg_cut[1] / 2,
+                  y + chg_cut[1] / 2, z_lid0 - 1, z_top + 1))
     for sx, sy in LID_CORNERS:
         x, y = sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in)
         l = l.cut(cyl_z(x, y, m3_clear / 2.0, z_lid0 - 1, z_top + 1))
@@ -744,7 +741,7 @@ def make_boards():
         if bd["usb"]:
             w, over, zc = bd["usb"]
             yc = (y0 + y1) / 2.0
-            sh = sh.fuse(box(x1 - 7.0, x1 + over, yc - w / 2, yc + w / 2,
+            sh = sh.fuse(box(x0 - over, x0 + 7.0, yc - w / 2, yc + w / 2,
                              zb + bd["pcb"] - 0.01, zb + 2 * zc - bd["pcb"]))
         out.append((bd["name"], sh.removeSplitter()))
     return out
@@ -919,8 +916,8 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("BrainScrew", "DeckBottom"),   # screws through floor and deck
            ("BrainBase", "BrainLid"),      # lid on its bosses
            ("Battery", "BrainLid"),        # taped into its frame
-           ("Switch", "BrainBase"),        # snapped into its cutout
-           ("ChargePort", "BrainBase"),    # panel-mounted in its cutout
+           ("Switch", "BrainLid"),         # snapped into its cutout
+           ("ChargePort", "BrainLid"),     # panel-mounted in its cutout
            ("ModelMagnet", "ModelBase"),   # pressed into the test model
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
@@ -1025,17 +1022,15 @@ if RUN_CHECKS:
           f" horn screw; its centre boss Ø{2 * sg_boss_r:.1f} stands {y_sg1 - y_g1:.2f} proud,")
     print(f"    the wall recessed {sg_recess:.2f} mm behind it"
           f" (wall left there {wall_t - sg_recess:.2f} mm)")
-    print(f"  Walls held by a {tongue_t:.1f} x {tongue_h:.1f} tongue top and bottom in"
-          " the decks' grooves; open the top deck to swap one")
+    print(f"  Square walls ({2 * lim_x:.1f}), a {tongue_t:.1f} x {tongue_h:.1f} tongue on every edge in"
+          " the decks' skirts and the columns; open the top deck to swap one")
     print(f"  BRAIN (its own box, on the top deck, 2 x M3x12 cap): box {2 * y_wo:.1f} x {2 * y_wo:.1f}, cube + brain"
           f" {y_wo + z_top:.1f} tall (1.5 cubes); inside {2 * b_in:.1f} x {2 * b_in:.1f} x"
           f" {z_lid0 - z_floor:.1f}")
-    print("    ESP32-C3 Mini + charge/5 V boost board (DAOKAI) on the floor; KCD11 3 A in +Y;")
-    print(f"    LiPo {battery[0]:.0f}x{battery[1]:.0f}x{battery[2]:.0f} under the lid;"
-          f" cables up a {cable_hole[1] - cable_hole[0]:.1f} x {cable_hole[3] - cable_hole[2]:.0f}"
-          " passage; USB-C x2 on the +X side")
-    print("    boards snap into cradles on the floor; the battery hangs in a frame under")
-    print("    the lid on foam tape. MEASURE the real boards (outline, PCB, USB position)")
+    print("    ESP32-C3 (USB inside, for the first flash) + DAOKAI charge/5 V boost on the floor;")
+    print(f"    LiPo {battery[0]:.0f}x{battery[1]:.2f}x{battery[2]:.2f} under the lid between two rails;"
+          f" cables up a {cable_hole[1] - cable_hole[0]:.1f} x {cable_hole[3] - cable_hole[2]:.0f} passage")
+    print("    sides plain: the KCD11 switch and the charging USB-C sit in the LID (wired)")
     print("  OPEN: wiring")
     print("=" * 72)
 else:
