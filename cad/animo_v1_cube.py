@@ -441,6 +441,18 @@ def make_output_hub():
     return h.cut(d_bar_y(0, 0, sock_d, sock_flat, y_wo - sock_depth, y_wo + 1))
 
 
+def _post_step(y0, y1, z0, z_narrow, z_wide):
+    """The lower post's tab end: full height (z0..z_wide) at the tab, its top
+    sloping down at 45 deg to the narrow part's top (z_narrow) where it meets
+    the part that runs under the gear — so the wall prints it, outer face
+    down, without an overhang. The slope stays on the tab's side: toward the
+    gear there is no room."""
+    yk = y1 - (z_wide - z_narrow)                # where the slope starts
+    pts = [v(sv_x0, y0, z0), v(sv_x0, y1, z0), v(sv_x0, y1, z_narrow),
+           v(sv_x0, yk, z_wide), v(sv_x0, y0, z_wide)]
+    return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(sv_x1 - sv_x0, 0, 0))
+
+
 def make_wall():
     """The wall module: flat plate, the output's hole, two servo posts, the
     four model locators. One part, printed outer face down."""
@@ -454,7 +466,7 @@ def make_wall():
     z_under = -r_tip - clr                      # top of the step, under the gear
     z_low = z_under - post_step
     posts = [box(sv_x0, sv_x1, y_tab1, y_wi + 0.01, case_z1 + post_gap, tab_z1),
-             box(sv_x0, sv_x1, y_tab1, y_stop, min(pz0, z_low), pz1),
+             _post_step(y_tab1, y_stop, min(pz0, z_low), z_under, pz1),
              box(sv_x0, sv_x1, y_stop - 0.01, y_wi + 0.01, z_low, z_under)]
     lbosses = [cyl_y(sx * loc_xz, sz * loc_xz, mag_d / 2.0 + 2.0,
                      y_wo - mag_h - mag_back, y_wi + 0.01)
