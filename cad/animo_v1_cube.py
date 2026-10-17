@@ -98,6 +98,13 @@ col_w_max = 7.5  # mm — corner columns of the frame, square: this, or as big a
 screw_in = 4.0   # mm — deck screws in from both outer edges (margin round the
                  #      countersunk head)
 plate_gap = 0.2  # mm — wall plate to columns and decks
+# The wall plate is SQUARE (user, 2026-10-17): every side is framed by a band
+# as wide as a column — the columns at the sides, a skirt of each deck at top
+# and bottom — and every edge has a tongue in a groove: in the decks' skirts
+# and in the columns. Closed, no gaps; assembly is all vertical (walls drop
+# into the bottom deck's column grooves, the top deck's columns slide down
+# over their other edges).
+skirt_in = 1.5   # mm — the decks' skirt reaches this far inside the wall plate
 # Walls held by tongue and groove: a tongue on the wall's top and bottom
 # edges sits in a groove along each edge of the decks. Closing the decks
 # traps every wall; swapping one means opening the top deck.
@@ -129,7 +136,8 @@ sock_depth = 4.5    # mm — socket depth from the outer face
 
 # ── Holes (calibrated in PLA, test-status T1.1, 2026-10) ────────────────────
 m2_pilot   = 1.6    # mm — M2 self-tapping pilot (as the v6 servo cradle)
-m3_pilot   = 2.5    # mm — M3 self-tapping pilot
+m3_pilot   = 3.0    # mm — M3 self-tapping pilot (T1.1: 3.0 in PLA; 2.5 needed
+                    #      the holes opened up by hand, 2026-10-17)
 m3_clear   = 3.3    # mm
 
 # ── Model magnets on the outer face, flush ──────────────────────────────────
@@ -454,19 +462,21 @@ def _hub_cone_y0():
     return y_wo - hub_recess - (flange_d - hub_d) / 2.0
 
 
-def _tongue(top):
-    """A tongue on the wall's top (top=True) or bottom edge, its face toward
-    the bed (the outer face's side) at 45 deg, so it prints without hanging in
-    the air. Still fits the decks' rectangular groove."""
+def _tongue(rot):
+    """A tongue along one edge of the square wall plate — the top edge, turned
+    `rot` deg about the wall normal for the others. Its face toward the bed
+    (the outer face's side) is at 45 deg, so it prints without hanging in the
+    air; it still fits the rectangular grooves."""
     y_mid = (y_wi + y_wo) / 2.0
     y_in, y_bed = y_mid - tongue_t / 2, y_mid + tongue_t / 2
-    lim_z = half_in - plate_gap
-    zs = 1 if top else -1
-    z_root, z_end = zs * (lim_z - 0.01), zs * (half_in + tongue_h)
-    reach = abs(z_end - z_root)
+    z_root, z_end = lim_x - 0.01, col_in + tongue_h
+    reach = z_end - z_root
     pts = [v(-lim_x, y_bed, z_root), v(-lim_x, y_bed - reach, z_end),
            v(-lim_x, y_in, z_end), v(-lim_x, y_in, z_root)]
-    return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(2 * lim_x, 0, 0))
+    t = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(2 * lim_x, 0, 0))
+    if rot:
+        t.rotate(ORIGIN, Y_AXIS, rot)
+    return t
 
 
 def _post_step(y0, y1, z0, z_narrow, z_wide):
@@ -484,8 +494,7 @@ def _post_step(y0, y1, z0, z_narrow, z_wide):
 def make_wall():
     """The wall module: flat plate, the output's hole, two servo posts, the
     four model locators. One part, printed outer face down."""
-    lim_z = half_in - plate_gap
-    plate = box(-lim_x, lim_x, y_wi, y_wo, -lim_z, lim_z)
+    plate = box(-lim_x, lim_x, y_wi, y_wo, -lim_x, lim_x)     # square
     # Tab posts. Upper: straight up to the wall. Lower: the servo gear sweeps
     # through its path, so it stops short of the gear slab, steps down and
     # runs to the wall UNDER the gear's tip.
@@ -499,7 +508,7 @@ def make_wall():
     lbosses = [cyl_y(sx * loc_xz, sz * loc_xz, mag_d / 2.0 + 2.0,
                      y_wo - mag_h - mag_back, y_wi + 0.01)
                for sx in (1, -1) for sz in (1, -1)]
-    tongues = [_tongue(True), _tongue(False)]
+    tongues = [_tongue(r) for r in (0, 90, 180, 270)]
     w = plate.fuse(posts + lbosses + tongues).removeSplitter()
     # Recess behind the servo gear's boss.
     if sg_recess > 0:
@@ -529,8 +538,10 @@ def make_magnet(sx, sz):
 
 def make_deck():
     """One deck — top and bottom are the SAME part. Drawn as the bottom one:
-    a plate with two full-height corner columns on one diagonal and two
-    countersunk M3 holes on the other. The top deck is this part turned over
+    a plate with a skirt round its edges (framing the walls' bottom edges,
+    grooved for their tongues), two full-height corner columns on one
+    diagonal (grooved for the walls' side edges) and two countersunk M3 holes
+    on the other. The top deck is this part turned over
     (180 deg about X): its columns come down onto the bottom one's holes and
     the other way round. Four M3x10 countersunk, two from each face, into
     pilots in the column ends."""
@@ -542,12 +553,25 @@ def make_deck():
         d = d.fuse(box(x0, x1, y0, y1, -half_in - 0.01, half_in))
         d = d.cut(cyl_z(sx * cxy, sy * cxy, m3_pilot / 2.0, half_in - 8.0,
                         half_in + 1))
-    y_mid = (y_wi + y_wo) / 2.0                  # grooves for the walls
+    y_mid = (y_wi + y_wo) / 2.0
+    for rot in (0, 90, 180, 270):
+        # The skirt along this edge: frames the wall plate's bottom edge, a
+        # column's width from the outer face, with the tongue's groove in it.
+        sk = box(-col_in, col_in, y_wi - skirt_in, y_wo, -half_in - 0.01, -col_in)
+        sk.rotate(ORIGIN, Z_AXIS, rot)
+        d = d.fuse(sk)
     for rot in (0, 90, 180, 270):
         g = box(-col_in, col_in, y_mid - groove_w / 2, y_mid + groove_w / 2,
-                -half_in - groove_d, -half_in + 0.01)
-        g.rotate(ORIGIN, Z_AXIS, rot)
-        d = d.cut(g)
+                -col_in - groove_d, -col_in + 0.01)
+        # ...and the grooves down the columns for the walls' side edges (cut
+        # at all four corners; only this deck's two columns are there).
+        gc = [box(sx * col_in - (0.01 if sx > 0 else groove_d),
+                  sx * col_in + (groove_d if sx > 0 else 0.01),
+                  y_mid - groove_w / 2, y_mid + groove_w / 2,
+                  -half_in - 0.01, half_in + 0.01) for sx in (1, -1)]
+        for c in [g] + gc:
+            c.rotate(ORIGIN, Z_AXIS, rot)
+            d = d.cut(c)
     d = d.cut(box(*cable_hole, -y_wo - 1, -half_in + 1))   # cables up to the brain
     for sx, sy in ((1, -1), (-1, 1)):            # countersunk holes
         x, y = sx * cxy, sy * cxy
