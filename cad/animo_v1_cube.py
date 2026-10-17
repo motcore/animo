@@ -172,33 +172,50 @@ brain_screw_head = 5.5   # mm — M3 cap head, inside the brain
 lid_t      = 3.0    # mm
 lid_boss   = 5.0    # mm — square corner bosses for the lid's two screws
 lid_screw_in = 4.5  # mm — lid screws in from the edges
-standoff   = 2.0    # mm — boards sit this far off the floor
-usb_w, usb_h = 10.0, 4.5   # mm — USB-C opening in the wall (plug overmould)
-# (name, x0, x1, y0, y1, height) on the floor, z from the floor + standoff
-BOARDS = [("Esp32", 4.15, 26.65, -20.0, -2.0, 4.5),     # ESP32-C3 Mini, USB +X
-          ("Power", 1.65, 26.65,   0.4, 20.4, 6.0)]     # DAOKAI charge + 5 V 2 A boost,
-                                                        # USB +X. 25 x 20 PLACEHOLDER
-# Power switch: a KCD11 mini rocker (3 A — the servos' current goes through
-# it; a mini slide switch is 0.5 A), snapped into a cutout in the +Y wall,
-# lying on its side under the battery. Sizes from listings — MEASURE.
-sw_cut   = (13.5, 9.0)    # mm — panel cutout (along X, along Z)
-sw_body  = (13.2, 8.7, 14.0)   # mm — behind the panel, terminals included
-sw_bezel = (15.2, 10.0, 2.0)   # mm — the face outside the wall
-sw_x     = -11.4               # mm — centre along the +Y wall
+usb_win = (12.5, 7.0)   # mm — window for a USB-C PLUG's overmould (W x H): the
+                        #      plug has to reach the receptacle through the wall
+# The boards, measured 2026-10-17 (calliper +0.04). x0..x1, y0..y1 is the PCB;
+# lift = PCB underside above the floor; h = top of the tallest part above the
+# PCB's underside; open = cradle sides left open; usb = (width, overhang past
+# the PCB edge, centre above the PCB's underside) of a USB-C on the +X edge.
+BOARDS = [
+    dict(name="Esp32",                     # ESP32-C3 Mini (SuperMini)
+         x=(2.85, 24.85), y=(-20.0, -1.8), pcb=0.9, lift=2.0, h=4.0,
+         lips=True, open=("+x",), usb=(8.9, 1.9, 2.0)),
+    dict(name="Power",                     # DAOKAI: charge + 5 V 2 A boost. No
+         x=(-15.0, 10.0), y=(6.6, 22.6),  # USB: charging comes in on its VIN
+         pcb=1.6, lift=3.0, h=6.1,         # pad. Only 0.4 clear by its long
+         lips=False, open=("-y",), usb=None),   # edges, so no lips: it sits on
+]                                          # a 3 mm foam pad (the lift). Its
+                                           # side button (1 mm proud) is on -y
+# The charging socket: a panel-mount USB-C with two wires (LYMISPIYA) into
+# the DAOKAI's VIN/GND, in the +X wall beside the ESP32's. PLACEHOLDER sizes
+# until it arrives — MEASURE.
+chg_y, chg_z = 14.0, 6.0             # mm — centre on the +X wall; z above the floor
+chg_cut  = (9.4, 3.8)                # mm — panel cutout (Y x Z) PLACEHOLDER
+chg_body = (12.0, 7.0, 12.0)         # mm — inside the wall: Y, Z, depth PLACEHOLDER
+# Power switch: KCD11 mini rocker (3 A — the servos' current goes through it),
+# snapped into a cutout in the -X wall, lying under the battery. Measured
+# 2026-10-17: bezel 15.12 x 10.50, body 13.10 x 8.40, 17.6 from the bezel's
+# face to the lugs.
+sw_cut   = (13.5, 9.0)    # mm — panel cutout (along Y, along Z): ~0.2 a side
+sw_body  = (13.1, 8.4, 15.6)   # mm — behind the bezel (wall included), lugs and all
+sw_bezel = (15.12, 10.5, 2.0)  # mm — the face outside the wall
+sw_y     = -8.0                # mm — centre along the -X wall
 sw_z     = 5.2                 # mm — centre above the floor
-battery = (50.0, 34.0, 10.0)   # 103450 LiPo 1S, ~1800 mAh, under the lid
-# Holding them, no screws, no glue: each board drops into a CRADLE on the
-# floor (a low wall round its outline, a ledge it rests on, two snap lips on
-# its long sides); its USB end butts the box wall, which is why that side of
-# the cradle is open. The battery sits in a FRAME under the lid, on a strip
-# of double-sided foam tape, and comes out with the lid.
-pcb_t      = 1.0    # mm — board thickness (MEASURE the real ones)
+battery = (52.0, 33.55, 10.24)  # CITYORK 103450 2000 mAh, measured: too long for
+                                # an end frame — the brain's walls stop its ends
+# Holding them: each board drops into a CRADLE on the floor (a low wall
+# round its outline; the ESP32 rests on a ledge under two snap lips, the
+# DAOKAI on a foam pad); the ESP32's USB end butts the box wall, which is why
+# that side of its cradle is open. The battery sits under the lid between two
+# rails, on a foam pad, and comes out with the lid.
 cradle_w   = 1.2    # mm — cradle wall
 cradle_clr = 0.3    # mm — board to cradle wall
 ledge_w    = 1.0    # mm — the ledge the board rests on, inside the wall
 lip        = 0.4    # mm — snap lip overhang over the board's edge
 lip_h      = 0.8    # mm
-comp_inset = 0.6    # mm — components keep this far from the long edges
+comp_inset = 0.6    # mm — components keep this far from the long edges (ESP32)
 frame_h    = 6.0    # mm — battery frame depth under the lid
 frame_t    = 1.2    # mm
 frame_clr  = 0.4    # mm
@@ -631,25 +648,33 @@ def make_brain_base():
     for sx, sy in LID_CORNERS:
         b = b.cut(cyl_z(sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in),
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
-    zb = z_floor + standoff
-    for name, x0, x1, y0, y1, h in BOARDS:
-        if x1 < b_in - 1.0:                # only the boards whose USB meets +X
+    for bd in BOARDS:                      # USB-C plug windows, +X wall
+        if not bd["usb"]:
             continue
-        yc = (y0 + y1) / 2.0
-        zc = zb + 2.5
-        b = b.cut(box(b_in - 1, y_wo + 1, yc - usb_w / 2, yc + usb_w / 2,
-                      zc - usb_h / 2, zc + usb_h / 2))
-    zc = z_floor + sw_z                    # the switch's cutout, +Y wall
-    b = b.cut(box(sw_x - sw_cut[0] / 2, sw_x + sw_cut[0] / 2, b_in - 1, y_wo + 1,
+        yc = sum(bd["y"]) / 2.0
+        zc = z_floor + bd["lift"] + bd["usb"][2]
+        b = b.cut(box(b_in - 1, y_wo + 1, yc - usb_win[0] / 2, yc + usb_win[0] / 2,
+                      zc - usb_win[1] / 2, zc + usb_win[1] / 2))
+    zc = z_floor + chg_z                   # the charging socket, +X wall
+    b = b.cut(box(b_in - 1, y_wo + 1, chg_y - chg_cut[0] / 2, chg_y + chg_cut[0] / 2,
+                  zc - chg_cut[1] / 2, zc + chg_cut[1] / 2))
+    zc = z_floor + sw_z                    # the switch's cutout, -X wall
+    b = b.cut(box(-y_wo - 1, -b_in + 1, sw_y - sw_cut[0] / 2, sw_y + sw_cut[0] / 2,
                   zc - sw_cut[1] / 2, zc + sw_cut[1] / 2))
     return b
 
 
+def make_charge_port():
+    zc = z_floor + chg_z
+    return box(b_in - chg_body[2], y_wo, chg_y - chg_body[0] / 2, chg_y + chg_body[0] / 2,
+               zc - chg_body[1] / 2, zc + chg_body[1] / 2)
+
+
 def make_switch():
     zc = z_floor + sw_z
-    body = box(sw_x - sw_body[0] / 2, sw_x + sw_body[0] / 2, y_wo - sw_body[2], y_wo,
+    body = box(-y_wo, -y_wo + sw_body[2], sw_y - sw_body[0] / 2, sw_y + sw_body[0] / 2,
                zc - sw_body[1] / 2, zc + sw_body[1] / 2)
-    bezel = box(sw_x - sw_bezel[0] / 2, sw_x + sw_bezel[0] / 2, y_wo, y_wo + sw_bezel[2],
+    bezel = box(-y_wo - sw_bezel[2], -y_wo, sw_y - sw_bezel[0] / 2, sw_y + sw_bezel[0] / 2,
                 zc - sw_bezel[1] / 2, zc + sw_bezel[1] / 2)
     return body.fuse(bezel)
 
@@ -658,26 +683,31 @@ def make_cradles():
     """One cradle per board: wall, ledge and two snap lips; the side toward
     the box wall stays open (the board's USB end butts that wall)."""
     zf = z_floor - 0.01                    # the floor
-    z_pcb1 = z_floor + standoff + pcb_t    # board's top face
     out = []
-    for name, x0, x1, y0, y1, h in BOARDS:
+    for bd in BOARDS:
+        (x0, x1), (y0, y1) = bd["x"], bd["y"]
+        z_pcb0 = z_floor + bd["lift"]
+        z_pcb1 = z_pcb0 + bd["pcb"]        # board's top face
         c = cradle_clr
-        open_px = x1 > b_in - 1.0          # against the +X wall
-        open_mx = x0 < -b_in + 1.0         # against the -X wall
         X0 = max(x0 - c - cradle_w, -b_in + 0.01)
         X1 = min(x1 + c + cradle_w, b_in - 0.01)
-        wall = box(X0, X1, y0 - c - cradle_w, y1 + c + cradle_w, zf, z_pcb1 + lip_h)
-        wall = wall.cut(box(x0 - c, x1 + c, y0 - c, y1 + c, zf - 1, z_pcb1 + lip_h + 1))
-        if open_px:
-            wall = wall.cut(box(x1, b_in + 1, y0 - c, y1 + c, zf - 1, z_pcb1 + 5))
-        if open_mx:
-            wall = wall.cut(box(-b_in - 1, x0, y0 - c, y1 + c, zf - 1, z_pcb1 + 5))
-        ledge = box(x0 - c, x1 + c, y0 - c, y1 + c, zf, z_floor + standoff).cut(
-            box(x0 + ledge_w, x1 - ledge_w, y0 + ledge_w, y1 - ledge_w,
-                zf - 1, z_floor + standoff + 1))
-        lips = [box(x0 + 2.0, x1 - 2.0, y0 - c - 0.01, y0 + lip, z_pcb1, z_pcb1 + lip_h),
-                box(x0 + 2.0, x1 - 2.0, y1 - lip, y1 + c + 0.01, z_pcb1, z_pcb1 + lip_h)]
-        out.append(wall.fuse([ledge] + lips))
+        top = z_pcb1 + (lip_h if bd["lips"] else 0.0)
+        wall = box(X0, X1, y0 - c - cradle_w, y1 + c + cradle_w, zf, top)
+        wall = wall.cut(box(x0 - c, x1 + c, y0 - c, y1 + c, zf - 1, top + 1))
+        cuts = {"+x": box(x1, X1 + 1, y0 - c - cradle_w - 1, y1 + c + cradle_w + 1, zf - 1, top + 1),
+                "-x": box(X0 - 1, x0, y0 - c - cradle_w - 1, y1 + c + cradle_w + 1, zf - 1, top + 1),
+                "+y": box(X0 - 1, X1 + 1, y1, y1 + c + cradle_w + 1, zf - 1, top + 1),
+                "-y": box(X0 - 1, X1 + 1, y0 - c - cradle_w - 1, y0, zf - 1, top + 1)}
+        for side in bd["open"]:
+            wall = wall.cut(cuts[side])
+        parts = []
+        if bd["lips"]:                     # ledge to rest on, lips to snap under
+            parts.append(box(x0 - c, x1 + c, y0 - c, y1 + c, zf, z_pcb0).cut(
+                box(x0 + ledge_w, x1 - ledge_w, y0 + ledge_w, y1 - ledge_w,
+                    zf - 1, z_pcb0 + 1)))
+            parts += [box(x0 + 2.0, x1 - 2.0, y0 - c - 0.01, y0 + lip, z_pcb1, z_pcb1 + lip_h),
+                      box(x0 + 2.0, x1 - 2.0, y1 - lip, y1 + c + 0.01, z_pcb1, z_pcb1 + lip_h)]
+        out.append(wall.fuse(parts) if parts else wall)
     return out
 
 
@@ -686,11 +716,12 @@ def make_brain_lid():
     and the battery's frame underneath."""
     l = box(-y_wo, y_wo, -y_wo, y_wo, z_lid0, z_top)
     L, W, H = battery
-    fx, fy = L / 2 + frame_clr, W / 2 + frame_clr
-    frame = box(-fx - frame_t, fx + frame_t, -fy - frame_t, fy + frame_t,
-                z_lid0 - frame_h, z_lid0 + 0.01).cut(
-        box(-fx, fx, -fy, fy, z_lid0 - frame_h - 1, z_lid0 + 1))
-    l = l.fuse(frame).removeSplitter()
+    fy = W / 2 + frame_clr                 # two rails along its long sides; its
+    rails = [box(-L / 2 + 3, L / 2 - 3, sy * fy, sy * (fy + frame_t),   # ends
+                 z_lid0 - frame_h, z_lid0 + 0.01) if sy > 0 else        # meet the
+             box(-L / 2 + 3, L / 2 - 3, -fy - frame_t, -fy,             # box walls
+                 z_lid0 - frame_h, z_lid0 + 0.01) for sy in (1, -1)]
+    l = l.fuse(rails).removeSplitter()
     for sx, sy in LID_CORNERS:
         x, y = sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in)
         l = l.cut(cyl_z(x, y, m3_clear / 2.0, z_lid0 - 1, z_top + 1))
@@ -702,12 +733,20 @@ def make_brain_lid():
 def make_boards():
     """Board envelopes: the PCB, and its components kept off the long edges
     (where the cradle's lips reach over)."""
-    zb = z_floor + standoff
     out = []
-    for n, x0, x1, y0, y1, h in BOARDS:
-        pcb = box(x0, x1, y0, y1, zb, zb + pcb_t)
-        comp = box(x0, x1, y0 + comp_inset, y1 - comp_inset, zb + pcb_t - 0.01, zb + h)
-        out.append((n, pcb.fuse(comp).removeSplitter()))
+    for bd in BOARDS:
+        (x0, x1), (y0, y1) = bd["x"], bd["y"]
+        zb = z_floor + bd["lift"]
+        ci = comp_inset if bd["lips"] else 0.0
+        pcb = box(x0, x1, y0, y1, zb, zb + bd["pcb"])
+        comp = box(x0, x1, y0 + ci, y1 - ci, zb + bd["pcb"] - 0.01, zb + bd["h"])
+        sh = pcb.fuse(comp)
+        if bd["usb"]:
+            w, over, zc = bd["usb"]
+            yc = (y0 + y1) / 2.0
+            sh = sh.fuse(box(x1 - 7.0, x1 + over, yc - w / 2, yc + w / 2,
+                             zb + bd["pcb"] - 0.01, zb + 2 * zc - bd["pcb"]))
+        out.append((bd["name"], sh.removeSplitter()))
     return out
 
 
@@ -811,6 +850,7 @@ PARTS.append(("BrainLid", make_brain_lid(), (0.45, 0.55, 0.75), 60))
 PARTS += [(n, sh, (0.15, 0.50, 0.25), 0) for n, sh in make_boards()]
 PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 0))
 PARTS.append(("Switch", make_switch(), (0.15, 0.15, 0.15), 0))
+PARTS.append(("ChargePort", make_charge_port(), (0.15, 0.15, 0.15), 0))
 PARTS.append(("ModelBase", make_model_base(), (0.55, 0.75, 0.45), 0))
 PARTS.append(("ModelArm", make_model_arm(), (0.90, 0.45, 0.35), 0))
 PARTS += [(f"ModelMagnet{'P' if sx > 0 else 'M'}{'P' if sz > 0 else 'M'}",
@@ -833,8 +873,8 @@ for _obj in list(doc.Objects):
         continue
     _w = _obj.Name.rsplit("_", 1)[-1] if "_" in _obj.Name else ""
     _label = WALL_LABEL.get(_w, "Marco")
-    if _obj.Name.startswith(("Brain", "Switch", "Battery")
-                            + tuple(b[0] for b in BOARDS)):
+    if _obj.Name.startswith(("Brain", "Switch", "Battery", "ChargePort")
+                            + tuple(b["name"] for b in BOARDS)):
         _label = "Cerebro"
     if _obj.Name.startswith("Model"):
         _label = "Modelo de prueba"
@@ -880,6 +920,7 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("BrainBase", "BrainLid"),      # lid on its bosses
            ("Battery", "BrainLid"),        # taped into its frame
            ("Switch", "BrainBase"),        # snapped into its cutout
+           ("ChargePort", "BrainBase"),    # panel-mounted in its cutout
            ("ModelMagnet", "ModelBase"),   # pressed into the test model
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
