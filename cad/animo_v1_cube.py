@@ -49,6 +49,13 @@ except ImportError:
 # PARAMETERS
 # ═══════════════════════════════════════════════════════════════════
 
+# ── Material: sets the fits that differ between them, and where the STLs go ─
+# The fits below are the PLA ones, tested 2026-10-17. PETG opens the ROUND
+# holes 0.1 mm (its coupons, T1.2, printed large holes ~0.1 tighter: 688 16.2
+# vs 16.1, 6805 37.3 vs 37.2). Flat faces (hex, grooves) and the M3 thread
+# stay. Headless, ANIMO_MATERIAL=PETG picks it without editing the file.
+MATERIAL = os.environ.get("ANIMO_MATERIAL", "PLA")     # "PLA" or "PETG"
+
 # ── Servo MG90D / MG90S 360 (datasheet, same as the v6 macro) ───────────────
 sv_case_len  = 22.4   # mm — case length (here vertical, Z)
 sv_case_t    = 12.5   # mm — case thickness (here along X, across the wall)
@@ -218,6 +225,14 @@ male_flat    = 4.4    # mm   ~0.2 small, outsides ~0.07 big: ~0.15 left)
 male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
 arm_w, arm_t = 8.0, 3.0
+
+if MATERIAL == "PETG":                   # estimates from T1.2 — to confirm
+    hub_clear += 0.05        # hub's hole: +0.1 on the diameter
+    horn_hub_grow += 0.05    # horn hub's press fit
+    mag_hole += 0.1          # model magnets
+    mdl_hole_d += 0.1        # test model's hub hole
+elif MATERIAL != "PLA":
+    raise ValueError(f"MATERIAL must be PLA or PETG, not {MATERIAL!r}")
 
 EXPORT_STL = True
 RUN_CHECKS = None   # None: checks when headless, skipped in the GUI
@@ -837,7 +852,7 @@ if HAS_GUI and getattr(App, "GuiUp", 0):
 if EXPORT_STL:
     _here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() \
         else App.getUserMacroDir(True)
-    _pdir = os.path.join(_here, "stl", "animo_v1")
+    _pdir = os.path.join(_here, "stl", "animo_v1", MATERIAL)
     os.makedirs(_pdir, exist_ok=True)
     _by = dict((n, sh) for n, sh, c, t in MODULE)
     for _n in ("Wall", "ServoGear", "OutputGear", "OutputHub"):
@@ -944,6 +959,7 @@ if RUN_CHECKS:
         print(f"  [OK ] no interference among {len(PARTS)} parts"
               " (designed contacts excepted)")
     print("-" * 72)
+    print(f"  MATERIAL {MATERIAL}: STLs in stl/animo_v1/{MATERIAL}/")
     print(f"  CUBE side {2 * y_wo:.1f} mm  (inside {2 * half_in:.1f}, walls {wall_t:.1f})")
     print(f"    = servo pack {2 * pack_half:.1f} (tower {sv_tower_h} + thickness"
           f" {sv_case_t} + gap {pack_gap_real:.2f}) + 2 x {y_wo - pack_half:.1f}"
