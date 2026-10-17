@@ -120,7 +120,9 @@ flange_d   = 14.0   # mm — the flange is a 45 deg CONE (hub_d to flange_d), an
                     #      in the air (strings, 2026-10-17); a cone prints clean
                     #      and centres the hub
 hex_af     = 8.0    # mm — hub's hex spigot, across flats, through the gear
-hex_hole   = 8.25   # mm — gear's hex hole, AF (press): spigot ~8.07 printed + 0.2 (D5 -> 5.2)
+hex_hole   = 8.1    # mm — gear's hex hole, AF (press). Flat faces barely shrink,
+                    #      unlike small round holes: 8.25 went on loose (tested
+                    #      2026-10-17); 8.1 against a ~8.07 printed spigot
 sock_d     = 6.0    # mm — socket, round part
 sock_flat  = 4.8    # mm — socket across the flat (the D)
 sock_depth = 4.5    # mm — socket depth from the outer face
