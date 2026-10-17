@@ -113,8 +113,10 @@ hub_d      = 10.0   # mm — hub diameter, runs in the wall
 hub_clear  = 0.2    # mm — radial clearance: hole 10.4. Printed OD comes ~+0.07 (PETG cross,
                     #      4.6 -> 4.67 avg of 10, 2026-10-15) and a turning fit wants +0.3 (T1.1)
 hub_recess = 0.2    # mm — flange face below the outer face, so it never rubs
-flange_d   = 14.0   # mm
-flange_t   = 1.2    # mm — counterbore depth (the flange is this less the recess)
+flange_d   = 14.0   # mm — the flange is a 45 deg CONE (hub_d to flange_d), and so
+                    #      is its seat in the wall: a flat step printed as a ring
+                    #      in the air (strings, 2026-10-17); a cone prints clean
+                    #      and centres the hub
 hex_af     = 8.0    # mm — hub's hex spigot, across flats, through the gear
 hex_hole   = 8.25   # mm — gear's hex hole, AF (press): spigot ~8.07 printed + 0.2 (D5 -> 5.2)
 sock_d     = 6.0    # mm — socket, round part
@@ -430,15 +432,36 @@ def make_output_gear():
 
 
 def make_output_hub():
-    """Hub: flange (flush in the wall's counterbore), round part turning in
-    the wall, hex spigot through the gear, female D socket. PETG — the torque
-    crosses the layers. Printed flange down."""
-    y_step = y_wo - flange_t
-    flange = cyl_y(0, 0, flange_d / 2.0, y_step, y_wo - hub_recess)
-    hub = cyl_y(0, 0, hub_d / 2.0, y_g1 - 0.01, y_step + 0.01)
+    """Hub: conical flange (flush in the wall's conical seat), round part
+    turning in the wall, hex spigot through the gear, female D socket. PETG —
+    the torque crosses the layers. Printed flange down."""
+    y_c0 = _hub_cone_y0()
+    flange = Part.makeCone(hub_d / 2.0, flange_d / 2.0, y_wo - hub_recess - y_c0,
+                           v(0, y_c0, 0), Y_AXIS)
+    hub = cyl_y(0, 0, hub_d / 2.0, y_g1 - 0.01, y_c0 + 0.01)
     spigot = hex_y(hex_af, y_g0, y_g1)
     h = flange.fuse([hub, spigot]).removeSplitter()
     return h.cut(d_bar_y(0, 0, sock_d, sock_flat, y_wo - sock_depth, y_wo + 1))
+
+
+def _hub_cone_y0():
+    """Where the hub's 45 deg flange cone starts (its narrow end)."""
+    return y_wo - hub_recess - (flange_d - hub_d) / 2.0
+
+
+def _tongue(top):
+    """A tongue on the wall's top (top=True) or bottom edge, its face toward
+    the bed (the outer face's side) at 45 deg, so it prints without hanging in
+    the air. Still fits the decks' rectangular groove."""
+    y_mid = (y_wi + y_wo) / 2.0
+    y_in, y_bed = y_mid - tongue_t / 2, y_mid + tongue_t / 2
+    lim_z = half_in - plate_gap
+    zs = 1 if top else -1
+    z_root, z_end = zs * (lim_z - 0.01), zs * (half_in + tongue_h)
+    reach = abs(z_end - z_root)
+    pts = [v(-lim_x, y_bed, z_root), v(-lim_x, y_bed - reach, z_end),
+           v(-lim_x, y_in, z_end), v(-lim_x, y_in, z_root)]
+    return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(2 * lim_x, 0, 0))
 
 
 def _post_step(y0, y1, z0, z_narrow, z_wide):
@@ -471,18 +494,18 @@ def make_wall():
     lbosses = [cyl_y(sx * loc_xz, sz * loc_xz, mag_d / 2.0 + 2.0,
                      y_wo - mag_h - mag_back, y_wi + 0.01)
                for sx in (1, -1) for sz in (1, -1)]
-    y_mid = (y_wi + y_wo) / 2.0
-    tongues = [box(-lim_x, lim_x, y_mid - tongue_t / 2, y_mid + tongue_t / 2,
-                   lim_z - 0.01, half_in + tongue_h),
-               box(-lim_x, lim_x, y_mid - tongue_t / 2, y_mid + tongue_t / 2,
-                   -half_in - tongue_h, -lim_z + 0.01)]
+    tongues = [_tongue(True), _tongue(False)]
     w = plate.fuse(posts + lbosses + tongues).removeSplitter()
     # Recess behind the servo gear's boss.
     if sg_recess > 0:
         w = w.cut(cyl_y(x_sv, 0.0, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
-    # Output: the hub's plain bearing hole, counterbored for its flange.
+    # Output: the hub's plain bearing hole, with a 45 deg conical seat for its
+    # flange (hub_clear off the flange's cone all round).
     w = w.cut(cyl_y(0, 0, hub_d / 2.0 + hub_clear, y_wi - 1, y_wo + 1))
-    w = w.cut(cyl_y(0, 0, flange_d / 2.0 + hub_clear, y_wo - flange_t, y_wo + 1))
+    y_c0 = _hub_cone_y0()
+    h_c = y_wo + 0.5 - y_c0
+    w = w.cut(Part.makeCone(hub_d / 2.0 + hub_clear, hub_d / 2.0 + hub_clear + h_c,
+                            h_c, v(0, y_c0, 0), Y_AXIS))
     # Servo screws: M2 pilots up the posts.
     for hz in tab_hole_z:
         w = w.cut(cyl_y(x_sv, hz, m2_pilot / 2.0, y_tab1 - 1, y_tab1 + 6.0))
@@ -904,7 +927,7 @@ if RUN_CHECKS:
     print(f"  Servo shaft {abs(x_sv):.2f} mm off the wall centre, at the output's height")
     print(f"  Gears: 2 x z{g_z} m{g_mod}, Ø{2 * r_pitch:.1f} pitch, Ø{2 * r_tip:.1f}"
           f" tip, {g_w:.1f} wide, 1:1")
-    print(f"  Hub (PETG) from outside, flange in a counterbore; gear pressed on its"
+    print(f"  Hub (PETG) from outside, 45 deg flange in a conical seat; gear pressed on its"
           f" hex {hex_af:.0f} AF from inside;")
     print(f"    turns in a Ø{hub_d + 2 * hub_clear:.1f} hole: no bearings, no shaft,"
           f" captured by the wall alone (axial play {g_gap:.1f})")
