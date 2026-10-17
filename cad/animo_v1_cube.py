@@ -76,7 +76,10 @@ horn_arm_w   = 5.13   # mm — their width where they meet the hub (avg 5.09 + 0
 horn_arm_len = 9.0    # mm — tip to tip, CUT to this (the gear's root is Ø12.4)
 horn_lift    = 1.5    # mm — the hub's underside above the tower: ~1.5, "maybe a
                       #      bit less" (can't get the caliper in). The cube follows it
-horn_grow    = 0.2    # mm — pocket over the horn (holes print ~0.2 small)
+horn_grow    = 0.2    # mm — pocket over the horn's ARMS (holes print ~0.2 small)
+horn_hub_grow = 0.4   # mm — pocket over its hub: generous, the arms key it. The
+                      #      hub tapers (moulding draft) and 0.2 bottomed out
+                      #      on the first print, 2026-10-17
 
 # ── Gears: two identical spur gears per wall, 1:1 ───────────────────────────
 g_mod   = 0.8    # mm — module (prints with a 0.4 nozzle)
@@ -392,7 +395,8 @@ def _horn(grow, y_top_extra=0.0):
     """The horn (or, grown, its pocket): hub + two arms along X, arms flush
     with the hub's top. y_top_extra lifts the pocket's top through the gear."""
     y0 = y_horn - horn_hub_h
-    hub = cyl_y(x_sv, 0.0, horn_hub_d / 2.0 + grow, y0 - grow, y_horn + y_top_extra)
+    hub_g = grow if grow == 0.0 else horn_hub_grow
+    hub = cyl_y(x_sv, 0.0, horn_hub_d / 2.0 + hub_g, y0 - grow, y_horn + y_top_extra)
     half = horn_arm_len / 2.0 + grow
     arms = box(x_sv - half, x_sv + half, y_horn - horn_arm_t - grow,
                y_horn + y_top_extra, -horn_arm_w / 2.0 - grow, horn_arm_w / 2.0 + grow)
