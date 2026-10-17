@@ -172,20 +172,20 @@ brain_screw_head = 5.5   # mm — M3 cap head, inside the brain
 lid_t      = 3.0    # mm
 lid_boss   = 5.0    # mm — square corner bosses for the lid's two screws
 lid_screw_in = 4.5  # mm — lid screws in from the edges
-# The brain's four sides are plain (user, 2026-10-17): the switch and the
-# charging socket sit in the LID, wired with some slack; the ESP32's own
-# USB-C stays inside — it is only for the first flashing, lid off, and points
-# into the open floor so a cable can reach it; after that, programs and
-# updates come over the air.
+# The switch and the charging socket sit in the LID, wired with some slack
+# (user, 2026-10-17); the ESP32's own USB-C stays reachable through a window
+# in the +X side, so the firmware can be changed without opening anything.
+usb_win = (12.5, 7.0)   # mm — window for a USB-C PLUG's overmould (W x H): the
+                        #      plug has to reach the receptacle through the wall
 # The boards, measured 2026-10-17 (calliper +0.04). x0..x1, y0..y1 is the PCB;
 # lift = PCB underside above the floor; h = top of the tallest part above the
 # PCB's underside; open = cradle sides left open; usb = (width, overhang past
-# the PCB edge, centre above the PCB's underside) of a USB-C on the -X edge.
+# the PCB edge, centre above the PCB's underside) of a USB-C on the +X edge.
 BOARDS = [
     dict(name="Esp32",                     # ESP32-C3 Mini (SuperMini), its
-         x=(4.0, 26.0), y=(-20.0, -1.8),   # USB-C on the -x end, inward
+         x=(2.85, 24.85), y=(-20.0, -1.8), # USB-C on the +x end, at the wall
          pcb=0.9, lift=2.0, h=4.0,
-         lips=True, open=("-x",), usb=(8.9, 1.9, 2.0)),
+         lips=True, open=("+x",), usb=(8.9, 1.9, 2.0)),
     dict(name="Power",                     # DAOKAI: charge + 5 V 2 A boost. No
          x=(-15.0, 10.0), y=(6.6, 22.6),  # USB: charging comes in on its VIN
          pcb=1.6, lift=3.0, h=6.1,         # pad. Only 0.4 clear by its long
@@ -634,9 +634,9 @@ FIX_CORNERS = ((1, 1), (-1, -1))         # the top deck's screw corners: the
 
 
 def make_brain_base():
-    """The brain's box: floor, plain side walls, two lid bosses, the cradles,
-    the cable passage and the two fixing holes. One printed part, printed
-    floor down."""
+    """The brain's box: floor, side walls (the ESP32's USB-C window in +X),
+    two lid bosses, the cradles, the cable passage and the two fixing holes.
+    One printed part, printed floor down."""
     b = box(-y_wo, y_wo, -y_wo, y_wo, y_wo, z_floor)
     shell = box(-y_wo, y_wo, -y_wo, y_wo, z_floor - 0.01, z_lid0).cut(
         box(-b_in, b_in, -b_in, b_in, z_floor - 1, z_lid0 + 1))
@@ -651,6 +651,13 @@ def make_brain_base():
     for sx, sy in LID_CORNERS:
         b = b.cut(cyl_z(sx * (y_wo - lid_screw_in), sy * (y_wo - lid_screw_in),
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
+    for bd in BOARDS:                      # USB-C plug window, +X wall
+        if not bd["usb"]:
+            continue
+        yc = sum(bd["y"]) / 2.0
+        zc = z_floor + bd["lift"] + bd["usb"][2]
+        b = b.cut(box(b_in - 1, y_wo + 1, yc - usb_win[0] / 2, yc + usb_win[0] / 2,
+                      zc - usb_win[1] / 2, zc + usb_win[1] / 2))
     return b
 
 
@@ -741,7 +748,7 @@ def make_boards():
         if bd["usb"]:
             w, over, zc = bd["usb"]
             yc = (y0 + y1) / 2.0
-            sh = sh.fuse(box(x0 - over, x0 + 7.0, yc - w / 2, yc + w / 2,
+            sh = sh.fuse(box(x1 - 7.0, x1 + over, yc - w / 2, yc + w / 2,
                              zb + bd["pcb"] - 0.01, zb + 2 * zc - bd["pcb"]))
         out.append((bd["name"], sh.removeSplitter()))
     return out
@@ -1027,10 +1034,10 @@ if RUN_CHECKS:
     print(f"  BRAIN (its own box, on the top deck, 2 x M3x12 cap): box {2 * y_wo:.1f} x {2 * y_wo:.1f}, cube + brain"
           f" {y_wo + z_top:.1f} tall (1.5 cubes); inside {2 * b_in:.1f} x {2 * b_in:.1f} x"
           f" {z_lid0 - z_floor:.1f}")
-    print("    ESP32-C3 (USB inside, for the first flash) + DAOKAI charge/5 V boost on the floor;")
+    print("    ESP32-C3 (its USB-C through a window in +X) + DAOKAI charge/5 V boost on the floor;")
     print(f"    LiPo {battery[0]:.0f}x{battery[1]:.2f}x{battery[2]:.2f} under the lid between two rails;"
           f" cables up a {cable_hole[1] - cable_hole[0]:.1f} x {cable_hole[3] - cable_hole[2]:.0f} passage")
-    print("    sides plain: the KCD11 switch and the charging USB-C sit in the LID (wired)")
+    print("    the KCD11 switch and the charging USB-C sit in the LID (wired)")
     print("  OPEN: wiring")
     print("=" * 72)
 else:
