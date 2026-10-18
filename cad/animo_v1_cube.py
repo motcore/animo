@@ -150,6 +150,9 @@ m3_clear   = 3.3    # mm
 # ── Model magnets on the outer face, flush ──────────────────────────────────
 mag_d, mag_h = 6.0, 2.0    # disc magnet N52, flush with the face (user: 6 x 2)
 mag_hole   = 6.3    # mm — press for the 6.00 magnets (5.96 + 0.04): 6.2 held only one in four
+mag_lip_d  = 5.0    # mm — hole behind the magnet: it sits on a lip, not on a bridged
+                     #      floor (its strands sag and the magnet stood proud). Whatever
+                     #      sags over this hole stays clear of the magnet
 loc_in     = mag_d / 2.0 + 2.5   # mm — magnet centre in from the plate's edge
 mag_back   = 1.5    # mm — wall left behind each magnet (a boss inside)
 
@@ -569,6 +572,8 @@ def make_wall():
         for sz in (1, -1):
             w = w.cut(cyl_y(sx * loc_xz, sz * loc_xz, mag_hole / 2.0,
                             y_wo - mag_h, y_wo + 1))
+            w = w.cut(cyl_y(sx * loc_xz, sz * loc_xz, mag_lip_d / 2.0,
+                            y_wi, y_wo))     # the plate only: not into a post
     return w
 
 
@@ -785,6 +790,8 @@ def make_model_base():
         for sz in (1, -1):
             b = b.cut(cyl_y(sx * loc_xz, sz * loc_xz, mag_hole / 2.0, y_wo - 1,
                             y_wo + mag_h))
+            b = b.cut(cyl_y(sx * loc_xz, sz * loc_xz, mag_lip_d / 2.0, y_wo,
+                            y_wo + mdl_t + 1))
     return b
 
 
