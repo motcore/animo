@@ -238,22 +238,23 @@ tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amaz
 # wall side, arm onto the hex, then the base on the wall.
 mdl_t        = 4.0    # mm — base thickness
 mdl_margin   = 5.0    # mm — base beyond the magnets' centres
-mdl_pocket_d = 17.0   # mm — pocket for the arm's flange (wall side)
-mdl_pocket_h = 1.5    # mm
+mdl_pocket_c = 0.3    # mm — the flange's pocket: the flange grown by this, a
+                      #      countersink, so the base prints it without a bridge
 mdl_hole_d   = 9.6    # mm — the arm's hub through the base
-arm_flange_d = 16.0   # mm
-arm_flange_t = 1.2    # mm
+arm_flange_d = 13.0   # mm — rim on the wall side, then a 45 deg cone down to the
+arm_flange_t = 0.8    # mm   hub: the shaft prints spigot down with no support
 arm_gap      = 0.15   # mm — flange off the wall's face
 arm_hub_d    = 9.0    # mm
-male_d       = 5.6    # mm — male D: 0.4 under the socket's 6.0 (holes print
-male_flat    = 4.4    # mm   ~0.2 small, outsides ~0.07 big: ~0.15 left)
+male_d       = 5.8    # mm — male D: 0.2 under the socket's 6.0. 5.6 / 4.4 (0.2
+male_flat    = 4.6    # mm   round and 0.2 on the flat) let it rock 25-30 deg
+male_try     = [(5.7, 4.5)]   # extra shafts to print beside it, (d, flat)
 male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
 arm_w, arm_t = 8.0, 3.0
 arm_boss_d   = 13.0   # mm — the arm's round end, round its hex hole
-arm_hex_hole = 8.0    # mm — onto the shaft's hex_af spigot: tighter than the
-                      #      gear's 8.1 (light there, and the gear is trapped;
-                      #      the arm is not)
+arm_hex_hole = 8.05   # mm — onto the shaft's hex_af spigot (PLA on PLA): 8.0 went
+                      #      on only with a hammer, the gear's 8.1 (on PETG) is
+                      #      light, and the arm is not trapped as the gear is
 
 if MATERIAL == "PETG":                   # estimates from T1.2 — to confirm
     hub_clear += 0.05        # hub's hole: +0.1 on the diameter
@@ -784,7 +785,12 @@ def make_model_base():
     Printed wall side down."""
     h = loc_xz + mdl_margin
     b = box(-h, h, y_wo, y_wo + mdl_t, -h, h)
-    b = b.cut(cyl_y(0, 0, mdl_pocket_d / 2.0, y_wo - 1, y_wo + mdl_pocket_h))
+    c = mdl_pocket_c
+    r_rim = arm_flange_d / 2.0 + c
+    y_rim = y_wo + arm_gap + arm_flange_t + c
+    b = b.cut(cyl_y(0, 0, r_rim, y_wo - 1, y_rim + 0.01))
+    b = b.cut(Part.makeCone(r_rim, mdl_hole_d / 2.0, r_rim - mdl_hole_d / 2.0,
+                            v(0, y_rim, 0), Y_AXIS))
     b = b.cut(cyl_y(0, 0, mdl_hole_d / 2.0, y_wo - 1, y_wo + mdl_t + 1))
     for sx in (1, -1):
         for sz in (1, -1):
@@ -803,16 +809,20 @@ _y_arm0 = y_wo + mdl_t + 0.3          # arm's inner face, off the base
 _y_arm1 = _y_arm0 + arm_t
 
 
-def make_model_shaft():
+def make_model_shaft(md=None, mf=None):
     """Test model's shaft: male D, flange, round hub through the base, hex
     spigot for the arm (its corners pass the base's hole). Printed spigot
-    down; the flange's underside needs a little support."""
+    down, no support: the flange's underside is a 45 deg cone."""
+    md = male_d if md is None else md
+    mf = male_flat if mf is None else mf
     yf0 = y_wo + arm_gap
     yf1 = yf0 + arm_flange_t
-    flange = cyl_y(0, 0, arm_flange_d / 2.0, yf0, yf1)
-    hub = cyl_y(0, 0, arm_hub_d / 2.0, yf1 - 0.01, _y_arm0)
+    r_f, r_h = arm_flange_d / 2.0, arm_hub_d / 2.0
+    flange = cyl_y(0, 0, r_f, yf0, yf1).fuse(
+        Part.makeCone(r_f, r_h, r_f - r_h, v(0, yf1 - 0.01, 0), Y_AXIS))
+    hub = cyl_y(0, 0, r_h, yf1, _y_arm0)
     spigot = hex_y(hex_af, _y_arm0 - 0.01, _y_arm1)
-    male = d_bar_y(0, 0, male_d, male_flat, yf0 - male_len, yf0 + 0.01)
+    male = d_bar_y(0, 0, md, mf, yf0 - male_len, yf0 + 0.01)
     return flange.fuse([hub, spigot, male]).removeSplitter()
 
 
@@ -931,6 +941,9 @@ if EXPORT_STL:
     make_brain_lid().exportStl(os.path.join(_pdir, "animo_v1_BrainLid.stl"))
     make_model_base().exportStl(os.path.join(_pdir, "animo_v1_ModelBase.stl"))
     make_model_shaft().exportStl(os.path.join(_pdir, "animo_v1_ModelShaft.stl"))
+    for _md, _mf in male_try:
+        make_model_shaft(_md, _mf).exportStl(
+            os.path.join(_pdir, f"animo_v1_ModelShaft_D{_md:.1f}.stl"))
     make_model_arm().exportStl(os.path.join(_pdir, "animo_v1_ModelArm.stl"))
 
 # ═══════════════════════════════════════════════════════════════════
