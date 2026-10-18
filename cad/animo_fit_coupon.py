@@ -2,13 +2,14 @@
 # FreeCAD Python Macro
 #
 # Settles the PLA fits in one print instead of trial and error (user,
-# 2026-10-18). Nominal 6.00 for every shape:
-#   - FEMALE strip: holes 6.00, 6.05 ... 6.40, labelled 00, 05 ... 40
-#     (hundredths ABOVE nominal), through a 5 mm plate.
-#   - MALE set: pins 6.00, 5.95 ... 5.60, labelled 00, 05 ... 40
-#     (hundredths BELOW nominal), 6 mm tall, each on its own loose tile so
+# 2026-10-18). Each feature is labelled with its DRAWN size in hundredths
+# ("590" = 5.90), so a pair's drawn clearance is hole minus pin:
+#   - FEMALE strip: holes 5.90 ... 6.40, through a 5 mm plate.
+#   - MALE set: pins 6.10 ... 5.60, 6 mm tall, each on its own loose tile so
 #     any pin goes into any hole (on one strip they only fit all at once).
-# Try the 00 pin in every hole and every pin in the 00 hole: the first gives
+# The two ranges overlap by 0.20 both ways, so the change from press to
+# slide falls inside the coupon whatever the printer does to each.
+# Try the 600 pin in every hole and every pin in the 600 hole: the first gives
 # how holes print, the second how outsides print, so the macros can set
 # both. For each, note: does not go in / press (by hand) / slides / turns
 # with play. Square = the flat faces of the hex and the D.
@@ -21,9 +22,10 @@ import FreeCAD as App
 import Part
 import os
 
-NOMINAL = 6.0     # mm
 STEP    = 0.05    # mm
-N       = 9       # 0.00 .. 0.40
+HOLES   = (5.90, 6.40)   # mm — first and last
+PINS    = (6.10, 5.60)
+N       = 11
 PITCH   = 10.0    # mm between features
 PLATE_T = 5.0     # mm — female plate
 BASE_T  = 2.0     # mm — male tiles' base
@@ -69,9 +71,9 @@ def female(shape):
     plate = Part.makeBox(length(), WIDTH, PLATE_T)
     for i in range(N):
         x = PITCH / 2.0 + i * PITCH
-        size = NOMINAL + i * STEP
+        size = HOLES[0] + i * STEP
         plate = plate.cut(feature(shape, size, x, -1, PLATE_T + 1))
-        plate = plate.cut(label(f"{i * 5:02d}", x, PLATE_T))
+        plate = plate.cut(label(f"{round(size * 100)}", x, PLATE_T))
     return plate.removeSplitter()
 
 
@@ -79,9 +81,9 @@ def male(shape):
     tiles = []
     for i in range(N):
         x = PITCH / 2.0 + i * PITCH
-        size = NOMINAL - i * STEP
+        size = PINS[0] - i * STEP
         tile = Part.makeBox(TILE_W, WIDTH, BASE_T, v(x - TILE_W / 2.0, 0, 0))
-        tile = tile.cut(label(f"{i * 5:02d}", x, BASE_T))
+        tile = tile.cut(label(f"{round(size * 100)}", x, BASE_T))
         pin = feature(shape, size, x, BASE_T - 0.01, BASE_T + PIN_H)
         tiles.append(tile.fuse(pin).removeSplitter())
     return Part.makeCompound(tiles)
@@ -94,6 +96,8 @@ _here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() \
     else App.getUserMacroDir(True)
 _dir = os.path.join(_here, "stl", "coupon")
 os.makedirs(_dir, exist_ok=True)
+assert round(HOLES[0] + (N - 1) * STEP, 2) == HOLES[1]
+assert round(PINS[0] - (N - 1) * STEP, 2) == PINS[1]
 for name, shape in PARTS:
     assert shape.isValid(), name
     if name.startswith("male"):
