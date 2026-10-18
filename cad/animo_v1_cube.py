@@ -149,7 +149,7 @@ m3_clear   = 3.3    # mm
 
 # ── Model magnets on the outer face, flush ──────────────────────────────────
 mag_d, mag_h = 6.0, 2.0    # disc magnet N52, flush with the face (user: 6 x 2)
-mag_hole   = 6.2    # mm — press-ish (holes print ~0.2 small)
+mag_hole   = 6.3    # mm — press for the 6.00 magnets (5.96 + 0.04): 6.2 held only one in four
 loc_in     = mag_d / 2.0 + 2.5   # mm — magnet centre in from the plate's edge
 mag_back   = 1.5    # mm — wall left behind each magnet (a boss inside)
 
