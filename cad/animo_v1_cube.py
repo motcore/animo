@@ -245,16 +245,17 @@ arm_flange_d = 13.0   # mm — rim on the wall side, then a 45 deg cone down to 
 arm_flange_t = 0.8    # mm   hub: the shaft prints spigot down with no support
 arm_gap      = 0.15   # mm — flange off the wall's face
 arm_hub_d    = 9.0    # mm
-male_d       = 5.8    # mm — male D: 0.2 under the socket's 6.0. 5.6 / 4.4 (0.2
-male_flat    = 4.6    # mm   round and 0.2 on the flat) let it rock 25-30 deg
-male_try     = [(5.7, 4.5)]   # extra shafts to print beside it, (d, flat)
+male_d       = 5.9    # mm — male D in the socket's 6.0 / 4.8. Rocking measured
+male_flat    = 4.7    # mm   with the output held: 5.6 / 4.4 25-30 deg, 5.8 / 4.6
+                      #      12-14 deg: ~6.5 deg per 0.1, so 5.9 ~6 deg
+male_try     = [(6.0, 4.8)]   # extra shafts to print beside it, (d, flat)
 male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
 arm_w, arm_t = 8.0, 3.0
 arm_boss_d   = 13.0   # mm — the arm's round end, round its hex hole
-arm_hex_hole = 8.05   # mm — onto the shaft's hex_af spigot (PLA on PLA): 8.0 went
-                      #      on only with a hammer, the gear's 8.1 (on PETG) is
-                      #      light, and the arm is not trapped as the gear is
+arm_hex_hole = 8.15   # mm — onto the shaft's hex_af spigot (PLA on PLA): 8.0 went
+                      #      on only with a hammer, 8.05 still too hard; the
+                      #      gear's 8.1 (on PETG) is light
 
 if MATERIAL == "PETG":                   # estimates from T1.2 — to confirm
     hub_clear += 0.05        # hub's hole: +0.1 on the diameter
@@ -1030,7 +1031,9 @@ if RUN_CHECKS:
                       ("ModelArm", "ModelBase", "> 0, arm turns free"),
                       ("Servo_W", "DeckBottom", "> 0, corner column")):
         g = gap(a, b)
-        checks.append((f"gap {a} / {b}", g, tgt, g > 0.05))
+        # The male D's clearance is set from measured rocking, not by rule.
+        need = 0.01 if (a, b) == ("ModelShaft", "OutputHub_N") else 0.05
+        checks.append((f"gap {a} / {b}", g, tgt, g > need))
     hex_corners = 2 * hex_af / math.sqrt(3.0)
     checks.append(("model shaft's hex corners through the base's hole",
                    mdl_hole_d - hex_corners, "> 0.2, it goes in from the wall side",
