@@ -1,12 +1,13 @@
-# Animo — fit coupon: round and square, a male strip and a female strip each
+# Animo — fit coupon: round and square, a female strip and loose male pins each
 # FreeCAD Python Macro
 #
 # Settles the PLA fits in one print instead of trial and error (user,
 # 2026-10-18). Nominal 6.00 for every shape:
 #   - FEMALE strip: holes 6.00, 6.05 ... 6.40, labelled 00, 05 ... 40
 #     (hundredths ABOVE nominal), through a 5 mm plate.
-#   - MALE strip: pins 6.00, 5.95 ... 5.60, labelled 00, 05 ... 40
-#     (hundredths BELOW nominal), 6 mm tall.
+#   - MALE set: pins 6.00, 5.95 ... 5.60, labelled 00, 05 ... 40
+#     (hundredths BELOW nominal), 6 mm tall, each on its own loose tile so
+#     any pin goes into any hole (on one strip they only fit all at once).
 # Try the 00 pin in every hole and every pin in the 00 hole: the first gives
 # how holes print, the second how outsides print, so the macros can set
 # both. For each, note: does not go in / press (by hand) / slides / turns
@@ -25,12 +26,13 @@ STEP    = 0.05    # mm
 N       = 9       # 0.00 .. 0.40
 PITCH   = 10.0    # mm between features
 PLATE_T = 5.0     # mm — female plate
-BASE_T  = 2.0     # mm — male strip's base
+BASE_T  = 2.0     # mm — male tiles' base
 PIN_H   = 6.0     # mm
 WIDTH   = 18.0    # mm — strip width: feature row + label row
 ROW_Y   = 6.0     # mm — feature centres from the strip's edge
 LABEL_Y = 14.0    # mm — label centres
 LABEL_H = 3.5     # mm — text height
+TILE_W  = 8.0     # mm — male tiles, PITCH apart: 2 mm between them
 ENGRAVE = 0.4     # mm
 FONT    = "C:/Windows/Fonts/arialbd.ttf"
 
@@ -74,14 +76,15 @@ def female(shape):
 
 
 def male(shape):
-    base = Part.makeBox(length(), WIDTH, BASE_T)
-    pins = []
+    tiles = []
     for i in range(N):
         x = PITCH / 2.0 + i * PITCH
         size = NOMINAL - i * STEP
-        pins.append(feature(shape, size, x, BASE_T - 0.01, BASE_T + PIN_H))
-        base = base.cut(label(f"{i * 5:02d}", x, BASE_T))
-    return base.fuse(pins).removeSplitter()
+        tile = Part.makeBox(TILE_W, WIDTH, BASE_T, v(x - TILE_W / 2.0, 0, 0))
+        tile = tile.cut(label(f"{i * 5:02d}", x, BASE_T))
+        pin = feature(shape, size, x, BASE_T - 0.01, BASE_T + PIN_H)
+        tiles.append(tile.fuse(pin).removeSplitter())
+    return Part.makeCompound(tiles)
 
 
 PARTS = [(f"{kind}_{shape}", (female if kind == "female" else male)(shape))
@@ -93,6 +96,8 @@ _dir = os.path.join(_here, "stl", "coupon")
 os.makedirs(_dir, exist_ok=True)
 for name, shape in PARTS:
     assert shape.isValid(), name
+    if name.startswith("male"):
+        assert len(shape.Solids) == N, name     # loose tiles, not one strip
     shape.exportStl(os.path.join(_dir, f"animo_fit_{name}.stl"))
     bb = shape.BoundBox
     print(f"  {name}: {bb.XLength:.0f} x {bb.YLength:.0f} x {bb.ZLength:.0f} mm,"
