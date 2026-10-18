@@ -229,8 +229,10 @@ tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amaz
 # its own, facing them — mind the polarity), and a MOVING part that the
 # output turns through a hole in the base. Here the moving part is a plain
 # arm with a pointer, so the D's single position and the 1:1 travel show.
-# The arm's flange sits in a pocket on the base's wall side: put the arm
-# through the base, then the base on the wall.
+# It comes in two, or it could never go through the base: a SHAFT (male D,
+# flange, hub, hex spigot) and the ARM pressed onto the spigot. The flange
+# sits in a pocket on the base's wall side: shaft through the base from the
+# wall side, arm onto the hex, then the base on the wall.
 mdl_t        = 4.0    # mm — base thickness
 mdl_margin   = 5.0    # mm — base beyond the magnets' centres
 mdl_pocket_d = 17.0   # mm — pocket for the arm's flange (wall side)
@@ -245,6 +247,10 @@ male_flat    = 4.4    # mm   ~0.2 small, outsides ~0.07 big: ~0.15 left)
 male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
 arm_w, arm_t = 8.0, 3.0
+arm_boss_d   = 13.0   # mm — the arm's round end, round its hex hole
+arm_hex_hole = 8.0    # mm — onto the shaft's hex_af spigot: tighter than the
+                      #      gear's 8.1 (light there, and the gear is trapped;
+                      #      the arm is not)
 
 if MATERIAL == "PETG":                   # estimates from T1.2 — to confirm
     hub_clear += 0.05        # hub's hole: +0.1 on the diameter
@@ -786,22 +792,33 @@ def make_model_magnet(sx, sz):
     return cyl_y(sx * loc_xz, sz * loc_xz, mag_d / 2.0, y_wo, y_wo + mag_h)
 
 
-def make_model_arm():
-    """Test model's moving part: male D, flange, hub through the base, an arm
-    with a pointer. Printed arm flat on the bed (the flange's underside needs
-    a little support)."""
+_y_arm0 = y_wo + mdl_t + 0.3          # arm's inner face, off the base
+_y_arm1 = _y_arm0 + arm_t
+
+
+def make_model_shaft():
+    """Test model's shaft: male D, flange, round hub through the base, hex
+    spigot for the arm (its corners pass the base's hole). Printed spigot
+    down; the flange's underside needs a little support."""
     yf0 = y_wo + arm_gap
     yf1 = yf0 + arm_flange_t
-    y_arm0 = y_wo + mdl_t + 0.3
-    y_arm1 = y_arm0 + arm_t
     flange = cyl_y(0, 0, arm_flange_d / 2.0, yf0, yf1)
-    hub = cyl_y(0, 0, arm_hub_d / 2.0, yf1 - 0.01, y_arm1)
-    lever = box(0, arm_len - arm_w / 2.0, y_arm0, y_arm1, -arm_w / 2.0, arm_w / 2.0)
-    pts = [v(arm_len - arm_w / 2.0, y_arm0, -arm_w / 2.0), v(arm_len, y_arm0, 0),
-           v(arm_len - arm_w / 2.0, y_arm0, arm_w / 2.0)]
-    tip = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(0, arm_t, 0))
+    hub = cyl_y(0, 0, arm_hub_d / 2.0, yf1 - 0.01, _y_arm0)
+    spigot = hex_y(hex_af, _y_arm0 - 0.01, _y_arm1)
     male = d_bar_y(0, 0, male_d, male_flat, yf0 - male_len, yf0 + 0.01)
-    return flange.fuse([hub, lever, tip, male]).removeSplitter()
+    return flange.fuse([hub, spigot, male]).removeSplitter()
+
+
+def make_model_arm():
+    """Test model's arm with a pointer, pressed onto the shaft's hex. Printed
+    flat."""
+    boss = cyl_y(0, 0, arm_boss_d / 2.0, _y_arm0, _y_arm1)
+    lever = box(0, arm_len - arm_w / 2.0, _y_arm0, _y_arm1, -arm_w / 2.0, arm_w / 2.0)
+    pts = [v(arm_len - arm_w / 2.0, _y_arm0, -arm_w / 2.0), v(arm_len, _y_arm0, 0),
+           v(arm_len - arm_w / 2.0, _y_arm0, arm_w / 2.0)]
+    tip = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(0, arm_t, 0))
+    arm = boss.fuse([lever, tip]).removeSplitter()
+    return arm.cut(hex_y(arm_hex_hole, _y_arm0 - 1, _y_arm1 + 1))
 
 
 def make_battery():
@@ -856,6 +873,7 @@ PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 0))
 PARTS.append(("Switch", make_switch(), (0.15, 0.15, 0.15), 0))
 PARTS.append(("ChargePort", make_charge_port(), (0.15, 0.15, 0.15), 0))
 PARTS.append(("ModelBase", make_model_base(), (0.55, 0.75, 0.45), 0))
+PARTS.append(("ModelShaft", make_model_shaft(), (0.90, 0.60, 0.35), 0))
 PARTS.append(("ModelArm", make_model_arm(), (0.90, 0.45, 0.35), 0))
 PARTS += [(f"ModelMagnet{'P' if sx > 0 else 'M'}{'P' if sz > 0 else 'M'}",
            make_model_magnet(sx, sz), (0.55, 0.55, 0.60), 0)
@@ -905,6 +923,7 @@ if EXPORT_STL:
     make_brain_base().exportStl(os.path.join(_pdir, "animo_v1_BrainBase.stl"))
     make_brain_lid().exportStl(os.path.join(_pdir, "animo_v1_BrainLid.stl"))
     make_model_base().exportStl(os.path.join(_pdir, "animo_v1_ModelBase.stl"))
+    make_model_shaft().exportStl(os.path.join(_pdir, "animo_v1_ModelShaft.stl"))
     make_model_arm().exportStl(os.path.join(_pdir, "animo_v1_ModelArm.stl"))
 
 # ═══════════════════════════════════════════════════════════════════
@@ -926,6 +945,7 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("Switch", "BrainLid"),         # snapped into its cutout
            ("ChargePort", "BrainLid"),     # panel-mounted in its cutout
            ("ModelMagnet", "ModelBase"),   # pressed into the test model
+           ("ModelShaft", "ModelArm"),     # arm pressed onto the hex
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
            ("Magnet", "Wall")}
@@ -984,12 +1004,20 @@ if RUN_CHECKS:
                       ("Servo_N", "DeckTop", "> 0"),
                       ("Servo_N", "DeckBottom", "> 0"),
                       ("Servo_E", "DeckTop", "> 0, corner column"),
-                      ("ModelArm", "OutputHub_N", "> 0, male D in the socket"),
+                      ("ModelShaft", "OutputHub_N", "> 0, male D in the socket"),
+                      ("ModelShaft", "ModelBase", "> 0, shaft turns free"),
+                      ("ModelShaft", "Wall_N", "> 0"),
                       ("ModelArm", "ModelBase", "> 0, arm turns free"),
-                      ("ModelArm", "Wall_N", "> 0"),
                       ("Servo_W", "DeckBottom", "> 0, corner column")):
         g = gap(a, b)
         checks.append((f"gap {a} / {b}", g, tgt, g > 0.05))
+    hex_corners = 2 * hex_af / math.sqrt(3.0)
+    checks.append(("model shaft's hex corners through the base's hole",
+                   mdl_hole_d - hex_corners, "> 0.2, it goes in from the wall side",
+                   mdl_hole_d - hex_corners > 0.2))
+    checks.append(("model arm's ring round its hex hole",
+                   (arm_boss_d - 2 * arm_hex_hole / math.sqrt(3.0)) / 2, ">= 1.6",
+                   (arm_boss_d - 2 * arm_hex_hole / math.sqrt(3.0)) / 2 >= 1.6))
 
     hole = 2 * (pack_half - sv_case_t - pack_gap_real)
     print("=" * 72)
