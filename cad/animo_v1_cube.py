@@ -257,10 +257,9 @@ male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
 arm_w, arm_t = 8.0, 3.0
 arm_boss_d   = 13.0   # mm — the arm's round end, round its hex hole
-arm_hex_hole = 8.20   # mm — onto the shaft's hex_af spigot (PLA on PLA): 8.0 went
-                      #      on only with a hammer, 8.05 still too hard. The fit
-                      #      coupon (2026-10-19) presses round at +0.20, square
-                      #      at +0.30: a hex lies between, its firm end taken
+arm_hex_hole = 8.15   # mm — onto the shaft's hex_af spigot (PLA on PLA): 8.0 went
+                      #      on only with a hammer, 8.05 still too hard, 8.20
+                      #      SLIDES with no press (2026-10-19): press between
 
 if MATERIAL == "PETG":                   # estimates from T1.2 — to confirm
     hub_clear += 0.05        # hub's hole: +0.1 on the diameter
