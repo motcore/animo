@@ -247,7 +247,9 @@ arm_gap      = 0.15   # mm — flange off the wall's face
 arm_hub_d    = 9.0    # mm
 male_d       = 5.9    # mm — male D in the socket's 6.0 / 4.8. Rocking measured
 male_flat    = 4.7    # mm   with the output held: 5.6 / 4.4 25-30 deg, 5.8 / 4.6
-                      #      12-14 deg: ~6.5 deg per 0.1, so 5.9 ~6 deg
+                      #      12-14 deg. Measured 2026-10-19: the socket prints
+                      #      5.90 and PLA outsides ~0.1 SMALL (5.8 -> 5.68, the
+                      #      coupon's 6.00 pin -> 5.91): ~6.0 drawn meets it
 male_try     = [(6.0, 4.8)]   # extra shafts to print beside it, (d, flat)
 male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
