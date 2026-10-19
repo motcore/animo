@@ -249,8 +249,10 @@ male_d       = 5.9    # mm — male D in the socket's 6.0 / 4.8. Rocking measure
 male_flat    = 4.7    # mm   with the output held: 5.6 / 4.4 25-30 deg, 5.8 / 4.6
                       #      12-14 deg. Measured 2026-10-19: the socket prints
                       #      5.90 and PLA outsides ~0.1 SMALL (5.8 -> 5.68, the
-                      #      coupon's 6.00 pin -> 5.91): ~6.0 drawn meets it
-male_try     = [(6.0, 4.8)]   # extra shafts to print beside it, (d, flat)
+                      #      coupon's 6.00 pin -> 5.91). 5.9 / 4.7 printed with arc
+                      #      moves off measures 5.79 and goes in with no play
+                      #      (2026-10-19): CONFIRMED for PLA
+male_try     = []     # extra shafts to print beside it, (d, flat)
 male_len     = 4.2    # mm — into a 4.5 deep socket
 arm_len      = 35.0   # mm — hub centre to the pointer's tip
 arm_w, arm_t = 8.0, 3.0
