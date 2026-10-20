@@ -23,14 +23,16 @@ puppet, a crane, a walker, a board game. One configuration, many models.
   travel.
 - **Flat faces, LEGO Technic compatible.** The output is a Technic **cross
   hole** flush with the wall, and four Technic **pin holes** on the 8 mm grid
-  (three under the output, every other hole, one above) hold the model on with standard friction pins: LEGO builds and printed
+  (two under the output at ±8, one in an upper corner) hold the model on with standard friction pins: LEGO builds and printed
   models fit the same face. The cube parks the outputs at one angle before a
   model goes on, so nothing has to be aimed by hand. (v1 had a female D and
   four flush magnets: dropped, as loose magnets are a hazard.) Ages 7+.
 - No bearings, no steel shafts: the output hub turns in a plain hole and is
   captured by the wall alone.
-- Walls are trapped between two **identical decks** by tongue and groove; four
-  M3×10 countersunk screws close the cube.
+- **Swap a wall without opening the cube.** Each wall module (wall, servo,
+  gears, hub) slides straight out through its window; two M2×6 countersunk
+  screws in the face, on one diagonal of the grid, hold it to bosses on the
+  two **identical decks**. Four M3×10 countersunk screws close the frame.
 - The **brain** is a separate half cube that sits on the closed cube, held by
   two M3 screws: ESP32-C3, a charger + 5 V boost board, a 3 A rocker switch
   and a 1S LiPo. Boards snap into cradles; the battery hangs under the lid.

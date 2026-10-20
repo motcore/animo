@@ -10,13 +10,17 @@
 #   - every output shaft on the CENTRE of its wall: symmetry is fundamental;
 #   - the outer face is FLAT and LEGO TECHNIC compatible (user, 2026-10-19):
 #     the output is a Technic CROSS hole in the hub, flush with the face, and
-#     four Technic pin holes on the 8 mm grid (three under it, every other
-#     hole, one above) hold the model on with bought friction pins. LEGO builds and printed models use
+#     three Technic pin holes on the 8 mm grid (two under it at +-8, one in
+#     an upper corner) hold the model on with bought friction pins; LEGO builds and printed models use
 #     the same face. v1 had a female D and four magnets: the magnets could
 #     come loose (a hazard) and the D made you aim the model by hand. The
 #     cube parks every output at one angle before a model goes on, and the
 #     model keeps its own part parked there, so they meet without aiming;
-#   - all four wall modules are IDENTICAL, only rotated about Z.
+#   - all four wall modules are IDENTICAL, only rotated about Z;
+#   - a wall comes out WITHOUT OPENING THE CUBE (user, 2026-10-20): the
+#     module (wall, servo, gears, hub) slides straight out along the servo's
+#     axis; two M2x6 countersunk screws in the face, on one diagonal of the
+#     8 mm grid, hold it to bosses on the decks. No tongues, no grooves.
 #
 # Layout (the user's, 2026-10-15): the four servos stand upright — case length
 # vertical, shaft toward their own wall — in a pinwheel round the cube's
@@ -116,18 +120,22 @@ screw_in = 4.0   # mm — deck screws in from both outer edges (margin round the
 plate_gap = 0.2  # mm — wall plate to columns and decks
 # The wall plate is SQUARE (user, 2026-10-17): every side is framed by a band
 # as wide as a column — the columns at the sides, a skirt of each deck at top
-# and bottom — and every edge has a tongue in a groove: in the decks' skirts
-# and in the columns. Closed, no gaps; assembly is all vertical (walls drop
-# into the bottom deck's column grooves, the top deck's columns slide down
-# over their other edges).
+# and bottom. v1 trapped every edge in a groove; v2 has none, so the module
+# slides out through its window.
 skirt_in = 1.5   # mm — the decks' skirt reaches this far inside the wall plate
-# Walls held by tongue and groove: a tongue on the wall's top and bottom
-# edges sits in a groove along each edge of the decks. Closing the decks
-# traps every wall; swapping one means opening the top deck.
-tongue_t  = 1.6  # mm — tongue thickness, centred in the wall
-tongue_h  = 1.2  # mm — how far it enters the deck
-groove_w  = 1.9  # mm — groove width (tongue + 0.3: holes print ~0.2 small)
-groove_d  = 1.4  # mm — groove depth (tongue + 0.2)
+# Walls held by two screws through the face, at two grid corners on one
+# diagonal (WALL_SCREWS): M2x6 countersunk into bosses that rise from the
+# decks behind the wall. The decks stay ONE part: the top deck is the
+# bottom one turned over, which takes each wall's lower-corner boss to the
+# opposite wall's upper corner on the other diagonal.
+WALL_SCREW_AT = (-2, -2)  # grid steps (x, z) of the bottom deck's boss; the top
+                          #      deck's lands at (+2, +2) on every wall
+ws_boss_w   = 5.0   # mm — boss width (measured room: 5 wide clears the module
+                    #      sliding out by 0.6, 2026-10-20)
+ws_boss_d   = 3.5   # mm — boss depth behind the wall (more meets the next wall
+                    #      at the upper corner)
+ws_head_d   = 3.8   # mm — M2 countersunk head
+ws_clear    = 2.2   # mm — M2 clearance through the wall
 
 # ── Output: a printed hub with a Technic cross hole, no bearings ────────────
 # Two parts, captured by the wall alone: the HUB comes in from outside, its
@@ -156,15 +164,13 @@ tech_len     = 7.8    # mm — a beam's thickness: the boss's length. Counterbor
                       #      0.8 at both ends like a beam; the pin goes 7.1 past
                       #      its collar and its ridge clicks into the far one
 tech_boss_d  = 7.6    # mm — boss round each pin hole, inside the wall
-TECH_PINS    = [(-2, -2), (0, -2), (2, -2), (-2, 2)]
-                      # pin holes in grid steps (x, z) from the output: three
-                      # under it, every other hole, and one above on the servo
-                      # gear's side (user, 2026-10-20). Above at x = +16 the
-                      # neighbour wall is in the way
-TECH_SHORT   = {(2, -2): 7.0}   # mm — bosses cut short: at (+16, -16) a full
-                      #      7.8 meets the neighbour wall. 7.0 is where a beam's
-                      #      far counterbore starts, so the pin clicks the same;
-                      #      its tip stands out behind, 0.9 clear
+TECH_PINS    = [(-2, 2), (-1, -2), (1, -2)]
+                      # pin holes in grid steps (x, z) from the output: two
+                      # under it at +-8 and one in the upper corner on the
+                      # servo gear's side (user, 2026-10-20). The top row and
+                      # the +16 column put the pin's tip into the neighbour
+                      # servo; the other corners take the wall screws
+TECH_SHORT   = {}     # mm — bosses cut short where a full 7.8 won't fit
 tech_cross   = 4.8    # mm — axle's cross, tip to tip
 tech_cross_w = 1.8    # mm — width of its arms
 hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
@@ -256,6 +262,9 @@ if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20)
     pin_grow = 0.15          # LEGO pin holes: on the Technic coupon (2026-10-20)
                              #      4.95 felt most like a real beam (5.00 close)
     horn_hub_grow += 0.05    # horn hub's press fit — an estimate, to confirm
+    m2_pilot = 1.7           # M2 self-tapping: PETG holes print small (M3 needed
+                             #      3.1 in PETG, 3.0 in PLA: T1.2)
+    ws_clear = 2.4
 elif MATERIAL != "PLA":
     raise ValueError(f"MATERIAL must be PLA or PETG, not {MATERIAL!r}")
 
@@ -322,6 +331,8 @@ col_in = y_wo - col_w
 lim_x  = col_in - plate_gap             # wall plate half width
 TECH_XZ = [(ix * tech_pitch, iz * tech_pitch) for ix, iz in TECH_PINS]
 TECH_DEPTH = [TECH_SHORT.get(p, tech_len) for p in TECH_PINS]
+WS_LOW = (WALL_SCREW_AT[0] * tech_pitch, WALL_SCREW_AT[1] * tech_pitch)
+WALL_SCREWS = [WS_LOW, (-WS_LOW[0], -WS_LOW[1])]   # bottom deck's, top deck's
 assert all(max(abs(x), abs(z)) + tech_cb_d / 2.0 < lim_x for x, z in TECH_XZ),     "pin holes off the plate"
 
 # ═══════════════════════════════════════════════════════════════════
@@ -498,23 +509,6 @@ def _hub_cone_y0():
     return y_wo - hub_recess - (flange_d - hub_d) / 2.0
 
 
-def _tongue(rot):
-    """A tongue along one edge of the square wall plate — the top edge, turned
-    `rot` deg about the wall normal for the others. Its face toward the bed
-    (the outer face's side) is at 45 deg, so it prints without hanging in the
-    air; it still fits the rectangular grooves."""
-    y_mid = (y_wi + y_wo) / 2.0
-    y_in, y_bed = y_mid - tongue_t / 2, y_mid + tongue_t / 2
-    z_root, z_end = lim_x - 0.01, col_in + tongue_h
-    reach = z_end - z_root
-    pts = [v(-lim_x, y_bed, z_root), v(-lim_x, y_bed - reach, z_end),
-           v(-lim_x, y_in, z_end), v(-lim_x, y_in, z_root)]
-    t = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(2 * lim_x, 0, 0))
-    if rot:
-        t.rotate(ORIGIN, Y_AXIS, rot)
-    return t
-
-
 def _post_step(y0, y1, z0, z_narrow, z_wide):
     """The lower post's tab end: full height (z0..z_wide) at the tab, its top
     sloping down at 45 deg to the narrow part's top (z_narrow) where it meets
@@ -543,8 +537,7 @@ def make_wall():
              box(sv_x0, sv_x1, y_stop - 0.01, y_wi + 0.01, z_low, z_under)]
     lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - d, y_wi + 0.01)
                for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH)]
-    tongues = [_tongue(r) for r in (0, 90, 180, 270)]
-    w = plate.fuse(posts + lbosses + tongues).removeSplitter()
+    w = plate.fuse(posts + lbosses).removeSplitter()
     # Recess behind the servo gear's boss.
     if sg_recess > 0:
         w = w.cut(cyl_y(x_sv, 0.0, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
@@ -558,6 +551,11 @@ def make_wall():
     # Servo screws: M2 pilots up the posts.
     for hz in tab_hole_z:
         w = w.cut(cyl_y(x_sv, hz, m2_pilot / 2.0, y_tab1 - 1, y_tab1 + 6.0))
+    # The two wall screws: clearance and a 90 deg countersink from the face.
+    for cx, cz in WALL_SCREWS:
+        w = w.cut(cyl_y(cx, cz, ws_clear / 2.0, y_wi - 1, y_wo + 1))
+        h = ws_head_d / 2.0 + 0.1
+        w = w.cut(Part.makeCone(h, 0.0, h, v(cx, y_wo + 0.001, cz), v(0, -1, 0)))
     # Technic pin holes, one module deep, the collar's counterbore at the face.
     for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH):
         w = w.cut(cyl_y(cx, cz, (tech_pin_d + pin_grow) / 2.0,
@@ -599,9 +597,9 @@ def make_tech_axle():
 
 def make_deck():
     """One deck — top and bottom are the SAME part. Drawn as the bottom one:
-    a plate with a skirt round its edges (framing the walls' bottom edges,
-    grooved for their tongues), two full-height corner columns on one
-    diagonal (grooved for the walls' side edges) and two countersunk M3 holes
+    a plate with a skirt round its edges (framing the walls' bottom edges),
+    a boss behind each wall for its lower screw, two full-height corner
+    columns on one diagonal and two countersunk M3 holes
     on the other. The top deck is this part turned over
     (180 deg about X): its columns come down onto the bottom one's holes and
     the other way round. Four M3x10 countersunk, two from each face, into
@@ -614,25 +612,19 @@ def make_deck():
         d = d.fuse(box(x0, x1, y0, y1, -half_in - 0.01, half_in))
         d = d.cut(cyl_z(sx * cxy, sy * cxy, m3_pilot / 2.0, half_in - 8.0,
                         half_in + 1))
-    y_mid = (y_wi + y_wo) / 2.0
+    bx, bz = WS_LOW
     for rot in (0, 90, 180, 270):
         # The skirt along this edge: frames the wall plate's bottom edge, a
-        # column's width from the outer face, with the tongue's groove in it.
+        # column's width from the outer face.
         sk = box(-col_in, col_in, y_wi - skirt_in, y_wo, -half_in - 0.01, -col_in)
-        sk.rotate(ORIGIN, Z_AXIS, rot)
-        d = d.fuse(sk)
-    for rot in (0, 90, 180, 270):
-        g = box(-col_in, col_in, y_mid - groove_w / 2, y_mid + groove_w / 2,
-                -col_in - groove_d, -col_in + 0.01)
-        # ...and the grooves down the columns for the walls' side edges (cut
-        # at all four corners; only this deck's two columns are there).
-        gc = [box(sx * col_in - (0.01 if sx > 0 else groove_d),
-                  sx * col_in + (groove_d if sx > 0 else 0.01),
-                  y_mid - groove_w / 2, y_mid + groove_w / 2,
-                  -half_in - 0.01, half_in + 0.01) for sx in (1, -1)]
-        for c in [g] + gc:
-            c.rotate(ORIGIN, Z_AXIS, rot)
-            d = d.cut(c)
+        # The wall screw's boss: from the deck up behind the wall, against its
+        # inner face, an M2 pilot along the screw.
+        bs = box(bx - ws_boss_w / 2.0, bx + ws_boss_w / 2.0, y_wi - ws_boss_d, y_wi,
+                 -half_in - 0.01, bz + ws_boss_w / 2.0)
+        pilot = cyl_y(bx, bz, m2_pilot / 2.0, y_wi - ws_boss_d - 1, y_wi + 0.01)
+        for part in (sk, bs, pilot):
+            part.rotate(ORIGIN, Z_AXIS, rot)
+        d = d.fuse([sk, bs]).cut(pilot)
     d = d.cut(box(*cable_hole, -y_wo - 1, -half_in + 1))   # cables up to the brain
     for sx, sy in ((1, -1), (-1, 1)):            # countersunk holes
         x, y = sx * cxy, sy * cxy
@@ -979,6 +971,20 @@ if RUN_CHECKS:
                        "> 0.3", g > 0.3))
     checks.append(("output's cross hole depth", cross_depth(), ">= 6, a good grip",
                    cross_depth() >= 6.0))
+    # A wall comes out without opening the cube: the north module slides out
+    # along +Y past everything that stays (decks, their bosses, the others).
+    stay = [n for n in names if not n.endswith("_N") and not n.startswith("Tech")]
+    hits = set()
+    for m in ("Wall_N", "Servo_N", "ServoGear_N", "Horn_N", "OutputGear_N",
+              "OutputHub_N"):
+        for dy in range(1, 32, 2):
+            sh = by[m].copy()
+            sh.translate(v(0, dy, 0))
+            for o in stay:
+                if sh.BoundBox.intersect(by[o].BoundBox) and                         sh.common(by[o]).Volume > 1e-3:
+                    hits.add(f"{m}/{o}")
+    checks.append((f"north module slides out 31 mm{': ' + ', '.join(sorted(hits)) if hits else ''}",
+                   len(hits), "0 parts in the way", not hits))
 
     hole = 2 * (pack_half - sv_case_t - pack_gap_real)
     print("=" * 72)
@@ -1017,13 +1023,14 @@ if RUN_CHECKS:
     print("  PRINTED per cube: Deck x2 (the same part, one turned over), and per wall:")
     print("           Wall (outer face down), ServoGear, OutputGear, OutputHub (PETG)")
     print("  PURCHASED per wall: MG90D or MG90S 360,")
-    print("           2x M2 tab screws;  per cube: 4x M3x10 countersunk;  LEGO friction pins")
+    print("           2x M2 tab screws, 2x M2x6 countersunk (wall);  per cube: 4x M3x10"
+          " countersunk;  LEGO friction pins")
     print(f"  Servo gear holds the servo's horn (arms CUT to {horn_arm_len:.0f} mm), no"
           f" horn screw; its centre boss Ø{2 * sg_boss_r:.1f} stands {y_sg1 - y_g1:.2f} proud,")
     print(f"    the wall recessed {sg_recess:.2f} mm behind it"
           f" (wall left there {wall_t - sg_recess:.2f} mm)")
-    print(f"  Square walls ({2 * lim_x:.1f}), a {tongue_t:.1f} x {tongue_h:.1f} tongue on every edge in"
-          " the decks' skirts and the columns; open the top deck to swap one")
+    print(f"  Square walls ({2 * lim_x:.1f}), no tongues: each module slides out through its"
+          f" window; 2 x M2x6 countersunk at (x, z) = {WALL_SCREWS} into deck bosses")
     print(f"  BRAIN (its own box, on the top deck, 2 x M3x12 cap): box {2 * y_wo:.1f} x {2 * y_wo:.1f}, cube + brain"
           f" {y_wo + z_top:.1f} tall (1.5 cubes); inside {2 * b_in:.1f} x {2 * b_in:.1f} x"
           f" {z_lid0 - z_floor:.1f}")
