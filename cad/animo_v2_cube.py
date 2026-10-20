@@ -281,6 +281,7 @@ if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20)
     m2_pilot = 1.7           # M2 self-tapping: PETG holes print small (M3 needed
                              #      3.1 in PETG, 3.0 in PLA: T1.2)
     ws_clear = 2.4
+    m3_pilot = 3.1           # M3 self-tapping in PETG: 3.1 (T1.2)
 elif MATERIAL != "PLA":
     raise ValueError(f"MATERIAL must be PLA or PETG, not {MATERIAL!r}")
 
@@ -665,6 +666,13 @@ def make_deck():
         for part in [sk, bs, pilot] + lp:
             part.rotate(ORIGIN, Z_AXIS, rot)
         d = d.fuse([sk, bs] + lp).cut(pilot)
+    # Room for the OTHER deck's column feet: at the corners where this deck
+    # has no column, the other deck's columns land with their 7.0 feet over
+    # this skirt and lip (2026-10-20: they would not seat).
+    for sx, sy in ((1, -1), (-1, 1)):
+        room = _col_foot(sx, sy, False, foot_clear)
+        room = room.common(box(-y_wo - 1, y_wo + 1, -y_wo - 1, y_wo + 1, -half_in, 0))
+        d = d.cut(room)          # above the plate only: the column lands on it
     d = d.cut(box(*cable_hole, -y_wo - 1, -half_in + 1))   # cables up to the brain
     for sx, sy in ((1, -1), (-1, 1)):            # countersunk holes
         x, y = sx * cxy, sy * cxy
@@ -953,7 +961,6 @@ if RUN_CHECKS is None:
 # Pairs that are MEANT to touch or nest (prefix match, same wall).
 ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("Horn", "ServoGear"),         # horn in its pocket
-           ("DeckBottom", "DeckTop"),      # columns land on the other deck
            ("BrainBase", "DeckTop"),       # the brain sits on the top deck
            ("BrainScrew", "BrainBase"), ("BrainScrew", "DeckTop"),
            ("BrainScrew", "DeckBottom"),   # screws through floor and deck
