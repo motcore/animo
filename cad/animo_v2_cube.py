@@ -123,6 +123,14 @@ col_foot_h = 5.0 #      goes in, widens to this square for this long, under it a
                  #      pilot breaking out of its inner faces (user, 2026-10-20).
                  #      7.0 clears the modules sliding out (0.34); 7.5 does not
 foot_clear = 0.3 # mm — the walls' corners are notched round the feet
+# A lip behind the wall plate's edges, from the frame, so the plate gap does not
+# show through and the plate stops on it going in. It cannot stop a module
+# coming OUT. At the gears' height the side lips break off: the servo gear
+# passes there (and with one deck part a column's side faces a servo-gear side
+# on one wall or another).
+lip_w = 1.2      # mm — how far the lip reaches in behind the plate's edge
+lip_t = 1.0      # mm — its thickness, behind the plate
+lip_gap_z = 8.4  # mm — side lips stop within this of the wall centre
 plate_gap = 0.2  # mm — wall plate to columns and decks
 # The wall plate is SQUARE (user, 2026-10-17): every side is framed by a band
 # as wide as a column — the columns at the sides, a skirt of each deck at top
@@ -624,7 +632,7 @@ def make_deck():
         x0, x1 = sorted((sx * col_in, sx * y_wo))
         y0, y1 = sorted((sy * col_in, sy * y_wo))
         d = d.fuse(box(x0, x1, y0, y1, -half_in - 0.01, half_in))
-        d = d.fuse(_col_foot(sx, sy))
+        d = d.fuse([_col_foot(sx, sy, top) for top in (True, False)])
         d = d.cut(cyl_z(sx * cxy, sy * cxy, m3_pilot / 2.0, half_in - 8.0,
                         half_in + 1))
     bx, bz = WS_LOW
@@ -637,9 +645,20 @@ def make_deck():
         bs = box(bx - ws_boss_w / 2.0, bx + ws_boss_w / 2.0, y_wi - ws_boss_d, y_wi,
                  -half_in - 0.01, bz + ws_boss_w / 2.0)
         pilot = cyl_y(bx, bz, m2_pilot / 2.0, y_wi - ws_boss_d - 1, y_wi + 0.01)
-        for part in (sk, bs, pilot):
+        # Lip behind the plate's bottom edge.
+        lp = [box(-col_in, col_in, y_wi - lip_t, y_wi, -col_in - 0.01,
+                  -(lim_x - lip_w))]
+        # ...and behind its side edges, on the columns this deck carries.
+        for sx in (1, -1):
+            corner = v(sx * col_in, y_wo, 0)
+            corner = App.Rotation(Z_AXIS, rot).multVec(corner)
+            if corner.x * corner.y > 0:          # this deck's columns: x*y > 0
+                x0, x1 = sorted((sx * (lim_x - lip_w), sx * (col_in + 0.01)))
+                for z0, z1 in ((-col_in, -lip_gap_z), (lip_gap_z, col_in)):
+                    lp.append(box(x0, x1, y_wi - lip_t, y_wi, z0, z1))
+        for part in [sk, bs, pilot] + lp:
             part.rotate(ORIGIN, Z_AXIS, rot)
-        d = d.fuse([sk, bs]).cut(pilot)
+        d = d.fuse([sk, bs] + lp).cut(pilot)
     d = d.cut(box(*cable_hole, -y_wo - 1, -half_in + 1))   # cables up to the brain
     for sx, sy in ((1, -1), (-1, 1)):            # countersunk holes
         x, y = sx * cxy, sy * cxy
@@ -649,20 +668,23 @@ def make_deck():
     return d.removeSplitter()
 
 
-def _col_foot(sx, sy):
-    """The widened free end of a column (top end, on the bottom deck): a
-    col_foot_w square, col_foot_h long, a 45 deg flare under it."""
+def _col_foot(sx, sy, top=True):
+    """A widened end of a column: a col_foot_w square, col_foot_h long, a 45
+    deg flare toward the column's middle. The free (top) end takes the other
+    deck's M3 screw; the one at the base just fills the walls' corner
+    notches, so every corner of every wall is closed."""
     W, c = col_foot_w, col_foot_w - col_w
-    z1, z0 = half_in, half_in - col_foot_h
+    k = 1 if top else -1                         # built along +z, no mirror
+    z_end, z_in = k * half_in, k * (half_in - col_foot_h)
     sq = box(*sorted((sx * (y_wo - W), sx * y_wo)), *sorted((sy * (y_wo - W), sy * y_wo)),
-             z0, z1)
+             *sorted((z_in, z_end)))
 
     def ring(a, z):
         x_in, y_in = sx * (y_wo - a), sy * (y_wo - a)
         x_out, y_out = sx * y_wo, sy * y_wo
         pts = [v(x_in, y_in, z), v(x_out, y_in, z), v(x_out, y_out, z), v(x_in, y_out, z)]
         return Part.makePolygon(pts + [pts[0]])
-    flare = Part.makeLoft([ring(col_w, z0 - c), ring(W, z0 + 0.01)], True)
+    flare = Part.makeLoft([ring(col_w, z_in - k * c), ring(W, z_in + k * 0.01)], True)
     return sq.fuse(flare)
 
 
