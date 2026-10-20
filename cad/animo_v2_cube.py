@@ -10,8 +10,8 @@
 #   - every output shaft on the CENTRE of its wall: symmetry is fundamental;
 #   - the outer face is FLAT and LEGO TECHNIC compatible (user, 2026-10-19):
 #     the output is a Technic CROSS hole in the hub, flush with the face, and
-#     five Technic pin holes on the 8 mm grid (a row of four under it, one
-#     above) hold the model on with bought friction pins. LEGO builds and printed models use
+#     four Technic pin holes on the 8 mm grid (three under it, every other
+#     hole, one above) hold the model on with bought friction pins. LEGO builds and printed models use
 #     the same face. v1 had a female D and four magnets: the magnets could
 #     come loose (a hazard) and the D made you aim the model by hand. The
 #     cube parks every output at one angle before a model goes on, and the
@@ -154,11 +154,14 @@ tech_cb_d    = 6.2    # mm — counterbore at the outer face, for the pin's coll
 tech_cb_h    = 0.8    # mm
 tech_len     = 7.8    # mm — a pin's half goes this deep: the hole's length
 tech_boss_d  = 7.6    # mm — boss round each pin hole, inside the wall
-TECH_PINS    = [(-2, -2), (-1, -2), (0, -2), (1, -2), (-2, 2)]
-                      # pin holes in grid steps (x, z) from the output: a row of
-                      # four under it and one above, on the servo gear's side.
-                      # In the 56 mm cube the column at x = +16 meets the
-                      # neighbour servo (measured 2026-10-20); these are free
+TECH_PINS    = [(-2, -2), (0, -2), (2, -2), (-2, 2)]
+                      # pin holes in grid steps (x, z) from the output: three
+                      # under it, every other hole, and one above on the servo
+                      # gear's side (user, 2026-10-20). Above at x = +16 the
+                      # neighbour wall is in the way
+TECH_SHORT   = {(2, -2): 7.0}   # mm — bosses cut short: at (+16, -16) a full
+                      #      7.8 meets the neighbour wall; the pin's tip stands
+                      #      0.8 out behind (0.9 clear), a little axial play
 tech_cross   = 4.8    # mm — axle's cross, tip to tip
 tech_cross_w = 1.8    # mm — width of its arms
 hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
@@ -311,6 +314,7 @@ col_w  = min(col_w_max, y_wo - (abs(x_sv) + r_tip + clr))
 col_in = y_wo - col_w
 lim_x  = col_in - plate_gap             # wall plate half width
 TECH_XZ = [(ix * tech_pitch, iz * tech_pitch) for ix, iz in TECH_PINS]
+TECH_DEPTH = [TECH_SHORT.get(p, tech_len) for p in TECH_PINS]
 assert all(max(abs(x), abs(z)) + tech_cb_d / 2.0 < lim_x for x, z in TECH_XZ),     "pin holes off the plate"
 
 # ═══════════════════════════════════════════════════════════════════
@@ -530,8 +534,8 @@ def make_wall():
     posts = [box(sv_x0, sv_x1, y_tab1, y_wi + 0.01, case_z1 + post_gap, tab_z1),
              _post_step(y_tab1, y_stop, min(pz0, z_low), z_under, pz1),
              box(sv_x0, sv_x1, y_stop - 0.01, y_wi + 0.01, z_low, z_under)]
-    lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - tech_len, y_wi + 0.01)
-               for cx, cz in TECH_XZ]
+    lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - d, y_wi + 0.01)
+               for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH)]
     tongues = [_tongue(r) for r in (0, 90, 180, 270)]
     w = plate.fuse(posts + lbosses + tongues).removeSplitter()
     # Recess behind the servo gear's boss.
@@ -548,9 +552,9 @@ def make_wall():
     for hz in tab_hole_z:
         w = w.cut(cyl_y(x_sv, hz, m2_pilot / 2.0, y_tab1 - 1, y_tab1 + 6.0))
     # Technic pin holes, one module deep, the collar's counterbore at the face.
-    for cx, cz in TECH_XZ:
+    for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH):
         w = w.cut(cyl_y(cx, cz, (tech_pin_d + hole_grow) / 2.0,
-                        y_wo - tech_len - 1, y_wo + 1))
+                        y_wo - d - 1, y_wo + 1))
         w = w.cut(cyl_y(cx, cz, (tech_cb_d + hole_grow) / 2.0,
                         y_wo - tech_cb_h, y_wo + 1))
     return w
@@ -984,7 +988,8 @@ if RUN_CHECKS:
           f" (gears {g_w:.1f} + gaps + wall {wall_t:.0f})")
     print(f"  Faces FLAT, LEGO Technic: output = cross hole {tech_cross + hole_grow:.2f} /"
           f" {tech_cross_w + hole_grow:.2f}, {cross_depth():.1f} deep, in a Ø{flange_d:.0f} flange;")
-    print(f"    {len(TECH_XZ)} pin holes Ø{tech_pin_d + hole_grow:.2f} x {tech_len} on"
+    print(f"    {len(TECH_XZ)} pin holes Ø{tech_pin_d + hole_grow:.2f} x {tech_len} (short:"
+          f" {TECH_SHORT}) on"
           f" Ø{tech_boss_d} bosses, counterbore Ø{tech_cb_d + hole_grow:.2f} x {tech_cb_h},"
           f" at (x, z) = {', '.join(f'({x:+.0f},{z:+.0f})' for x, z in TECH_XZ)}")
     print(f"  Deck screws {screw_in:.1f} mm in from the edges: {screw_in - 3.2:.1f} mm"

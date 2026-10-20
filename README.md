@@ -23,7 +23,7 @@ puppet, a crane, a walker, a board game. One configuration, many models.
   travel.
 - **Flat faces, LEGO Technic compatible.** The output is a Technic **cross
   hole** flush with the wall, and four Technic **pin holes** on the 8 mm grid
-  (a row of four under the output, one above) hold the model on with standard friction pins: LEGO builds and printed
+  (three under the output, every other hole, one above) hold the model on with standard friction pins: LEGO builds and printed
   models fit the same face. The cube parks the outputs at one angle before a
   model goes on, so nothing has to be aimed by hand. (v1 had a female D and
   four flush magnets: dropped, as loose magnets are a hazard.) Ages 7+.
