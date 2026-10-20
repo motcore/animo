@@ -117,6 +117,12 @@ col_w_max = 7.5  # mm — corner columns of the frame, square: this, or as big a
                  #      the servo gear passing the corner lets them
 screw_in = 4.0   # mm — deck screws in from both outer edges (margin round the
                  #      countersunk head)
+col_foot_w = 7.0 # mm — each column's free end, where the other deck's M3 screw
+col_foot_h = 5.0 #      goes in, widens to this square for this long, under it a
+                 #      45 deg flare from the column: a 5.1 column left the M3
+                 #      pilot breaking out of its inner faces (user, 2026-10-20).
+                 #      7.0 clears the modules sliding out (0.34); 7.5 does not
+foot_clear = 0.3 # mm — the walls' corners are notched round the feet
 plate_gap = 0.2  # mm — wall plate to columns and decks
 # The wall plate is SQUARE (user, 2026-10-17): every side is framed by a band
 # as wide as a column — the columns at the sides, a skirt of each deck at top
@@ -538,6 +544,14 @@ def make_wall():
     lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - d, y_wi + 0.01)
                for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH)]
     w = plate.fuse(posts + lbosses).removeSplitter()
+    # Notch every corner of the plate round the columns' feet (each wall meets
+    # two of them, on one diagonal or the other; all four keep walls alike).
+    x_n = y_wo - col_foot_w - foot_clear
+    z_n = half_in - col_foot_h - (col_foot_w - col_w) - foot_clear
+    for sx in (1, -1):
+        for sz in (1, -1):
+            w = w.cut(box(*sorted((sx * x_n, sx * (lim_x + 1))), y_wi - 1, y_wo + 1,
+                          *sorted((sz * z_n, sz * (lim_x + 1)))))
     # Recess behind the servo gear's boss.
     if sg_recess > 0:
         w = w.cut(cyl_y(x_sv, 0.0, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
@@ -610,6 +624,7 @@ def make_deck():
         x0, x1 = sorted((sx * col_in, sx * y_wo))
         y0, y1 = sorted((sy * col_in, sy * y_wo))
         d = d.fuse(box(x0, x1, y0, y1, -half_in - 0.01, half_in))
+        d = d.fuse(_col_foot(sx, sy))
         d = d.cut(cyl_z(sx * cxy, sy * cxy, m3_pilot / 2.0, half_in - 8.0,
                         half_in + 1))
     bx, bz = WS_LOW
@@ -632,6 +647,23 @@ def make_deck():
         d = d.cut(Part.makeCone(3.2, m3_clear / 2.0, 1.6,
                                 v(x, y, -y_wo - 0.001), Z_AXIS))
     return d.removeSplitter()
+
+
+def _col_foot(sx, sy):
+    """The widened free end of a column (top end, on the bottom deck): a
+    col_foot_w square, col_foot_h long, a 45 deg flare under it."""
+    W, c = col_foot_w, col_foot_w - col_w
+    z1, z0 = half_in, half_in - col_foot_h
+    sq = box(*sorted((sx * (y_wo - W), sx * y_wo)), *sorted((sy * (y_wo - W), sy * y_wo)),
+             z0, z1)
+
+    def ring(a, z):
+        x_in, y_in = sx * (y_wo - a), sy * (y_wo - a)
+        x_out, y_out = sx * y_wo, sy * y_wo
+        pts = [v(x_in, y_in, z), v(x_out, y_in, z), v(x_out, y_out, z), v(x_in, y_out, z)]
+        return Part.makePolygon(pts + [pts[0]])
+    flare = Part.makeLoft([ring(col_w, z0 - c), ring(W, z0 + 0.01)], True)
+    return sq.fuse(flare)
 
 
 def deck_top(deck):
@@ -969,6 +1001,9 @@ if RUN_CHECKS:
                 if o != n and o != "Wall_N" and not o.startswith("Tech"))
         checks.append((f"{n} at ({cx:+.0f}, {cz:+.0f}): pin clear of everything", g,
                        "> 0.3", g > 0.3))
+    left = col_foot_w - screw_in - m3_pilot / 2.0
+    checks.append(("column foot: plastic round the M3 pilot, inner faces", left,
+                   ">= 1.0", left >= 1.0))
     checks.append(("output's cross hole depth", cross_depth(), ">= 6, a good grip",
                    cross_depth() >= 6.0))
     # A wall comes out without opening the cube: the north module slides out
@@ -1011,7 +1046,8 @@ if RUN_CHECKS:
           f" Ø{tech_boss_d} bosses, counterbore Ø{tech_cb_d + pin_grow:.2f} x {tech_cb_h},"
           f" at (x, z) = {', '.join(f'({x:+.0f},{z:+.0f})' for x, z in TECH_XZ)}")
     print(f"  Deck screws {screw_in:.1f} mm in from the edges: {screw_in - 3.2:.1f} mm"
-          f" round the countersunk head; corner columns {col_w:.1f} square")
+          f" round the countersunk head; corner columns {col_w:.1f} square, their free"
+          f" ends {col_foot_w:.1f} for {col_foot_h:.0f} mm (45 deg flare)")
     print(f"  Hole through the middle of the pack: {hole:.1f} x {hole:.1f} mm (wiring)")
     print(f"  Servo shaft {abs(x_sv):.2f} mm off the wall centre, at the output's height")
     print(f"  Gears: 2 x z{g_z} m{g_mod}, Ø{2 * r_pitch:.1f} pitch, Ø{2 * r_tip:.1f}"
