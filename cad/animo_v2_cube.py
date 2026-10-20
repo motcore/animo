@@ -169,6 +169,7 @@ tech_cross   = 4.8    # mm — axle's cross, tip to tip
 tech_cross_w = 1.8    # mm — width of its arms
 hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
                       #      (PLA, arcs off: the 6.0 socket printed 5.90)
+pin_grow     = hole_grow   # mm — LEGO pin holes (PETG: measured, below)
 
 # ── Holes (calibrated in PLA, test-status T1.1, 2026-10) ────────────────────
 m2_pilot   = 1.6    # mm — M2 self-tapping pilot (as the v6 servo cradle)
@@ -250,7 +251,9 @@ tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amaz
 if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20):
                          # press +0.05, sliding +0.25; holes print ~0.27 small
     hub_clear = 0.125        # hub's hole: sliding, +0.25 on the diameter
-    hole_grow = 0.27         # LEGO pins and axles go into true-size holes
+    hole_grow = 0.27         # LEGO axle's cross: holes print ~0.27 small (untested)
+    pin_grow = 0.15          # LEGO pin holes: on the Technic coupon (2026-10-20)
+                             #      4.95 felt most like a real beam (5.00 close)
     horn_hub_grow += 0.05    # horn hub's press fit — an estimate, to confirm
 elif MATERIAL != "PLA":
     raise ValueError(f"MATERIAL must be PLA or PETG, not {MATERIAL!r}")
@@ -556,14 +559,14 @@ def make_wall():
         w = w.cut(cyl_y(x_sv, hz, m2_pilot / 2.0, y_tab1 - 1, y_tab1 + 6.0))
     # Technic pin holes, one module deep, the collar's counterbore at the face.
     for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH):
-        w = w.cut(cyl_y(cx, cz, (tech_pin_d + hole_grow) / 2.0,
+        w = w.cut(cyl_y(cx, cz, (tech_pin_d + pin_grow) / 2.0,
                         y_wo - d - 1, y_wo + 1))
-        w = w.cut(cyl_y(cx, cz, (tech_cb_d + hole_grow) / 2.0,
+        w = w.cut(cyl_y(cx, cz, (tech_cb_d + pin_grow) / 2.0,
                         y_wo - tech_cb_h, y_wo + 1))
         # ...and at the boss's inner end, as on a LEGO beam's far face: the
         # pin's ridge clicks into it (the pin goes 7.1 past its collar)
         if d >= tech_len:
-            w = w.cut(cyl_y(cx, cz, (tech_cb_d + hole_grow) / 2.0,
+            w = w.cut(cyl_y(cx, cz, (tech_cb_d + pin_grow) / 2.0,
                             y_wo - tech_len - 1, y_wo - tech_len + tech_cb_h))
     return w
 
@@ -996,9 +999,9 @@ if RUN_CHECKS:
           f" (gears {g_w:.1f} + gaps + wall {wall_t:.0f})")
     print(f"  Faces FLAT, LEGO Technic: output = cross hole {tech_cross + hole_grow:.2f} /"
           f" {tech_cross_w + hole_grow:.2f}, {cross_depth():.1f} deep, in a Ø{flange_d:.0f} flange;")
-    print(f"    {len(TECH_XZ)} pin holes Ø{tech_pin_d + hole_grow:.2f} x {tech_len} (short:"
+    print(f"    {len(TECH_XZ)} pin holes Ø{tech_pin_d + pin_grow:.2f} x {tech_len} (short:"
           f" {TECH_SHORT}) on"
-          f" Ø{tech_boss_d} bosses, counterbore Ø{tech_cb_d + hole_grow:.2f} x {tech_cb_h},"
+          f" Ø{tech_boss_d} bosses, counterbore Ø{tech_cb_d + pin_grow:.2f} x {tech_cb_h},"
           f" at (x, z) = {', '.join(f'({x:+.0f},{z:+.0f})' for x, z in TECH_XZ)}")
     print(f"  Deck screws {screw_in:.1f} mm in from the edges: {screw_in - 3.2:.1f} mm"
           f" round the countersunk head; corner columns {col_w:.1f} square")
