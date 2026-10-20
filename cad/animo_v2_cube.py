@@ -152,7 +152,9 @@ tech_pitch   = 8.0    # mm — the grid
 tech_pin_d   = 4.8    # mm — pin hole
 tech_cb_d    = 6.2    # mm — counterbore at the outer face, for the pin's collar
 tech_cb_h    = 0.8    # mm
-tech_len     = 7.8    # mm — a pin's half goes this deep: the hole's length
+tech_len     = 7.8    # mm — a beam's thickness: the boss's length. Counterbored
+                      #      0.8 at both ends like a beam; the pin goes 7.1 past
+                      #      its collar and its ridge clicks into the far one
 tech_boss_d  = 7.6    # mm — boss round each pin hole, inside the wall
 TECH_PINS    = [(-2, -2), (0, -2), (2, -2), (-2, 2)]
                       # pin holes in grid steps (x, z) from the output: three
@@ -160,8 +162,9 @@ TECH_PINS    = [(-2, -2), (0, -2), (2, -2), (-2, 2)]
                       # gear's side (user, 2026-10-20). Above at x = +16 the
                       # neighbour wall is in the way
 TECH_SHORT   = {(2, -2): 7.0}   # mm — bosses cut short: at (+16, -16) a full
-                      #      7.8 meets the neighbour wall; the pin's tip stands
-                      #      0.8 out behind (0.9 clear), a little axial play
+                      #      7.8 meets the neighbour wall. 7.0 is where a beam's
+                      #      far counterbore starts, so the pin clicks the same;
+                      #      its tip stands out behind, 0.9 clear
 tech_cross   = 4.8    # mm — axle's cross, tip to tip
 tech_cross_w = 1.8    # mm — width of its arms
 hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
@@ -557,6 +560,11 @@ def make_wall():
                         y_wo - d - 1, y_wo + 1))
         w = w.cut(cyl_y(cx, cz, (tech_cb_d + hole_grow) / 2.0,
                         y_wo - tech_cb_h, y_wo + 1))
+        # ...and at the boss's inner end, as on a LEGO beam's far face: the
+        # pin's ridge clicks into it (the pin goes 7.1 past its collar)
+        if d >= tech_len:
+            w = w.cut(cyl_y(cx, cz, (tech_cb_d + hole_grow) / 2.0,
+                            y_wo - tech_len - 1, y_wo - tech_len + tech_cb_h))
     return w
 
 

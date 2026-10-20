@@ -103,8 +103,8 @@ PARTS += [("mini_female_round", female("round", MINI_HOLES)),
           ("mini_male_round", male("round", MINI_PINS))]
 
 # LEGO Technic coupon (2026-10-20): holes for real LEGO friction pins and
-# axles, one module deep (7.8, like the wall's bosses), the pin holes with
-# the collar's counterbore. Labelled with the drawn size; the cube's macro
+# axles, one module deep (7.8, a beam's thickness), the pin holes with a
+# counterbore on both faces as on a LEGO beam. Labelled with the drawn size; the cube's macro
 # draws them at LEGO size + 0.27 in PETG (pin 5.07, cross 5.07 / 2.07).
 TECH_T      = 7.8
 TECH_PINS   = [4.95, 5.00, 5.05, 5.10, 5.15, 5.20, 5.25]
@@ -127,6 +127,9 @@ def technic(kind):
             plate = plate.cut(feature("round", size, x, -1, TECH_T + 1))
             plate = plate.cut(feature("round", TECH_CB[0], x, TECH_T - TECH_CB[1],
                                       TECH_T + 1))
+            # LEGO beams have it on both faces: the pin's ridge clicks into
+            # the far one (7.1 in from the collar, the far one starts at 7.0)
+            plate = plate.cut(feature("round", TECH_CB[0], x, -1, TECH_CB[1]))
         else:
             plate = plate.cut(cross_z(size, size - 3.0, x, -1, TECH_T + 1))
         plate = plate.cut(label(f"{round(size * 100)}", x, TECH_T))
