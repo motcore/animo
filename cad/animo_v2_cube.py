@@ -284,7 +284,7 @@ if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20)
     m2_pilot = 1.7           # M2 self-tapping: PETG holes print small (M3 needed
                              #      3.1 in PETG, 3.0 in PLA: T1.2)
     ws_clear = 2.4
-    m3_pilot = 3.1           # M3 self-tapping in PETG: 3.1 (T1.2)
+    # M3 pilots stay 3.0: in the PETG decks (2026-10-20) they went in just right
 elif MATERIAL != "PLA":
     raise ValueError(f"MATERIAL must be PLA or PETG, not {MATERIAL!r}")
 
