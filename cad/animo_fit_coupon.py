@@ -67,21 +67,25 @@ def length():
     return N * PITCH
 
 
-def female(shape):
-    plate = Part.makeBox(length(), WIDTH, PLATE_T)
-    for i in range(N):
+def _sizes(first, sign):
+    return [round(first + sign * i * STEP, 2) for i in range(N)]
+
+
+def female(shape, sizes=None):
+    sizes = sizes or _sizes(HOLES[0], 1)
+    plate = Part.makeBox(len(sizes) * PITCH, WIDTH, PLATE_T)
+    for i, size in enumerate(sizes):
         x = PITCH / 2.0 + i * PITCH
-        size = HOLES[0] + i * STEP
         plate = plate.cut(feature(shape, size, x, -1, PLATE_T + 1))
         plate = plate.cut(label(f"{round(size * 100)}", x, PLATE_T))
     return plate.removeSplitter()
 
 
-def male(shape):
+def male(shape, sizes=None):
+    sizes = sizes or _sizes(PINS[0], -1)
     tiles = []
-    for i in range(N):
+    for i, size in enumerate(sizes):
         x = PITCH / 2.0 + i * PITCH
-        size = PINS[0] - i * STEP
         tile = Part.makeBox(TILE_W, WIDTH, BASE_T, v(x - TILE_W / 2.0, 0, 0))
         tile = tile.cut(label(f"{round(size * 100)}", x, BASE_T))
         pin = feature(shape, size, x, BASE_T - 0.01, BASE_T + PIN_H)
@@ -91,6 +95,12 @@ def male(shape):
 
 PARTS = [(f"{kind}_{shape}", (female if kind == "female" else male)(shape))
          for shape in ("round", "square") for kind in ("female", "male")]
+# Mini coupon (2026-10-20): just the pieces that compared the two readings,
+# to reprint quickly with another seam setting.
+MINI_HOLES = [6.00, 6.05, 6.20]
+MINI_PINS  = [6.00, 5.75, 5.70]
+PARTS += [("mini_female_round", female("round", MINI_HOLES)),
+          ("mini_male_round", male("round", MINI_PINS))]
 
 _here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() \
     else App.getUserMacroDir(True)
@@ -100,8 +110,8 @@ assert round(HOLES[0] + (N - 1) * STEP, 2) == HOLES[1]
 assert round(PINS[0] - (N - 1) * STEP, 2) == PINS[1]
 for name, shape in PARTS:
     assert shape.isValid(), name
-    if name.startswith("male"):
-        assert len(shape.Solids) == N, name     # loose tiles, not one strip
+    if "male" in name and "female" not in name:
+        assert len(shape.Solids) == (3 if name.startswith("mini") else N), name
     shape.exportStl(os.path.join(_dir, f"animo_fit_{name}.stl"))
     bb = shape.BoundBox
     print(f"  {name}: {bb.XLength:.0f} x {bb.YLength:.0f} x {bb.ZLength:.0f} mm,"
