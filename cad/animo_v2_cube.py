@@ -118,10 +118,12 @@ col_w_max = 7.5  # mm — corner columns of the frame, square: this, or as big a
 screw_in = 4.0   # mm — deck screws in from both outer edges (margin round the
                  #      countersunk head)
 col_foot_w = 7.0 # mm — each column's free end, where the other deck's M3 screw
-col_foot_h = 5.0 #      goes in, widens to this square for this long, under it a
+col_foot_h = 8.5 #      goes in, widens to this square for this long, under it a
                  #      45 deg flare from the column: a 5.1 column left the M3
                  #      pilot breaking out of its inner faces (user, 2026-10-20).
-                 #      7.0 clears the modules sliding out (0.34); 7.5 does not
+                 #      7.0 clears the modules sliding out (0.34); 7.5 does not.
+                 #      As long as the M3 pilot (8) plus 0.5: at 5 the pilot broke
+                 #      out under the foot (slicer: floating bits, 2026-10-20)
 foot_clear = 0.3 # mm — the walls' corners are notched round the feet
 # A lip behind the wall plate's edges, from the frame, so the plate gap does not
 # show through and the plate stops on it going in. It cannot stop a module
@@ -1029,6 +1031,8 @@ if RUN_CHECKS:
                 if o != n and o != "Wall_N" and not o.startswith("Tech"))
         checks.append((f"{n} at ({cx:+.0f}, {cz:+.0f}): pin clear of everything", g,
                        "> 0.3", g > 0.3))
+    checks.append(("column foot longer than the M3 pilot (8)", col_foot_h, "> 8",
+                   col_foot_h > 8.0))
     left = col_foot_w - screw_in - m3_pilot / 2.0
     checks.append(("column foot: plastic round the M3 pilot, inner faces", left,
                    ">= 1.0", left >= 1.0))
