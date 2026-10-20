@@ -552,14 +552,12 @@ def make_wall():
     lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - d, y_wi + 0.01)
                for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH)]
     w = plate.fuse(posts + lbosses).removeSplitter()
-    # Notch every corner of the plate round the columns' feet (each wall meets
-    # two of them, on one diagonal or the other; all four keep walls alike).
-    x_n = y_wo - col_foot_w - foot_clear
-    z_n = half_in - col_foot_h - (col_foot_w - col_w) - foot_clear
+    # Notch every corner of the plate round the columns' feet: their own shape,
+    # 45 deg flare and all, grown by foot_clear (a square notch left a
+    # triangle open at the flare, 2026-10-20).
     for sx in (1, -1):
-        for sz in (1, -1):
-            w = w.cut(box(*sorted((sx * x_n, sx * (lim_x + 1))), y_wi - 1, y_wo + 1,
-                          *sorted((sz * z_n, sz * (lim_x + 1)))))
+        for top in (True, False):
+            w = w.cut(_col_foot(sx, 1, top, foot_clear))   # north wall's corners
     # Recess behind the servo gear's boss.
     if sg_recess > 0:
         w = w.cut(cyl_y(x_sv, 0.0, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
@@ -668,14 +666,16 @@ def make_deck():
     return d.removeSplitter()
 
 
-def _col_foot(sx, sy, top=True):
+def _col_foot(sx, sy, top=True, grow=0.0):
     """A widened end of a column: a col_foot_w square, col_foot_h long, a 45
     deg flare toward the column's middle. The free (top) end takes the other
     deck's M3 screw; the one at the base just fills the walls' corner
-    notches, so every corner of every wall is closed."""
-    W, c = col_foot_w, col_foot_w - col_w
+    notches, so every corner of every wall is closed. `grow` enlarges it all
+    round: the walls' notches are this shape grown by foot_clear."""
+    W, a0 = col_foot_w + grow, col_w + grow
+    c = W - a0
     k = 1 if top else -1                         # built along +z, no mirror
-    z_end, z_in = k * half_in, k * (half_in - col_foot_h)
+    z_end, z_in = k * (half_in + grow), k * (half_in - col_foot_h - grow)
     sq = box(*sorted((sx * (y_wo - W), sx * y_wo)), *sorted((sy * (y_wo - W), sy * y_wo)),
              *sorted((z_in, z_end)))
 
@@ -684,7 +684,7 @@ def _col_foot(sx, sy, top=True):
         x_out, y_out = sx * y_wo, sy * y_wo
         pts = [v(x_in, y_in, z), v(x_out, y_in, z), v(x_out, y_out, z), v(x_in, y_out, z)]
         return Part.makePolygon(pts + [pts[0]])
-    flare = Part.makeLoft([ring(col_w, z_in - k * c), ring(W, z_in + k * 0.01)], True)
+    flare = Part.makeLoft([ring(a0, z_in - k * c), ring(W, z_in + k * 0.01)], True)
     return sq.fuse(flare)
 
 
