@@ -651,9 +651,15 @@ def make_deck():
             corner = v(sx * col_in, y_wo, 0)
             corner = App.Rotation(Z_AXIS, rot).multVec(corner)
             if corner.x * corner.y > 0:          # this deck's columns: x*y > 0
-                x0, x1 = sorted((sx * (lim_x - lip_w), sx * (col_in + 0.01)))
-                for z0, z1 in ((-col_in, -lip_gap_z), (lip_gap_z, col_in)):
-                    lp.append(box(x0, x1, y_wi - lip_t, y_wi, z0, z1))
+                x_in, x_col = sx * (lim_x - lip_w), sx * (col_in + 0.3)
+                lp.append(box(*sorted((x_in, x_col)), y_wi - lip_t, y_wi,
+                              -col_in, -lip_gap_z))
+                # The upper stretch starts in mid air on the deck as printed:
+                # it grows out of the column on a 45 deg underside instead.
+                pts = [v(x_col, y_wi - lip_t, lip_gap_z - (col_in + 0.3 - lim_x + lip_w)),
+                       v(x_in, y_wi - lip_t, lip_gap_z), v(x_in, y_wi - lip_t, col_in),
+                       v(x_col, y_wi - lip_t, col_in)]
+                lp.append(Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(0, lip_t, 0)))
         for part in [sk, bs, pilot] + lp:
             part.rotate(ORIGIN, Z_AXIS, rot)
         d = d.fuse([sk, bs] + lp).cut(pilot)
