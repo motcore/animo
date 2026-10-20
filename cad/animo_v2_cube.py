@@ -189,6 +189,7 @@ TECH_PINS    = [(-2, 2), (-1, -2), (1, -2)]
 TECH_SHORT   = {}     # mm — bosses cut short where a full 7.8 won't fit
 tech_cross   = 4.8    # mm — axle's cross, tip to tip
 tech_cross_w = 1.8    # mm — width of its arms
+cross_try    = [0.07]   # extra hubs to print with this cross grow (PETG)
 hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
                       #      (PLA, arcs off: the 6.0 socket printed 5.90)
 pin_grow     = hole_grow   # mm — LEGO pin holes (PETG: measured, below)
@@ -273,8 +274,10 @@ tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amaz
 if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20):
                          # press +0.05, sliding +0.25; holes print ~0.27 small
     hub_clear = 0.125        # hub's hole: sliding, +0.25 on the diameter
-    hole_grow = 0.17         # LEGO axle's cross: on the Technic coupon (2026-10-20)
-                             #      4.97 / 1.97 felt best with a real LEGO axle
+    hole_grow = 0.12         # LEGO axle's cross: on the Technic coupon 4.97 / 1.97,
+                             #      its smallest, felt best; in the hub (6.5 deep)
+                             #      it was too loose (2026-10-20): 4.92, and a 4.87
+                             #      hub to try (cross_try)
     pin_grow = 0.15          # LEGO pin holes: on the Technic coupon (2026-10-20)
                              #      4.95 felt most like a real beam (5.00 close)
     horn_hub_grow += 0.05    # horn hub's press fit — an estimate, to confirm
@@ -507,7 +510,7 @@ def make_output_gear():
     return make_gear(0, 0, PH_O, y_g0, y_g1, hex_y(hex_hole, y_g0 - 1, y_g1 + 1))
 
 
-def make_output_hub():
+def make_output_hub(grow=None):
     """Hub: conical flange (flush in the wall's conical seat), round part
     turning in the wall, hex spigot through the gear, Technic cross hole. PETG —
     the torque crosses the layers. Printed flange down."""
@@ -517,7 +520,8 @@ def make_output_hub():
     hub = cyl_y(0, 0, hub_d / 2.0, y_g1 - 0.01, y_c0 + 0.01)
     spigot = hex_y(hex_af, y_g0, y_g1)
     h = flange.fuse([hub, spigot]).removeSplitter()
-    return h.cut(cross_y(tech_cross + hole_grow, tech_cross_w + hole_grow,
+    gr = hole_grow if grow is None else grow
+    return h.cut(cross_y(tech_cross + gr, tech_cross_w + gr,
                          y_wo - cross_depth(), y_wo + 1))
 
 
@@ -948,6 +952,9 @@ if EXPORT_STL:
     for _n in ("Wall", "ServoGear", "OutputGear", "OutputHub"):
         _by[_n].exportStl(os.path.join(_pdir, f"animo_v2_{_n}.stl"))
     DECK.exportStl(os.path.join(_pdir, "animo_v2_Deck.stl"))
+    for _gr in cross_try:
+        make_output_hub(_gr).exportStl(os.path.join(
+            _pdir, f"animo_v2_OutputHub_X{round((tech_cross + _gr) * 100)}.stl"))
     make_brain_base().exportStl(os.path.join(_pdir, "animo_v2_BrainBase.stl"))
     make_brain_lid().exportStl(os.path.join(_pdir, "animo_v2_BrainLid.stl"))
 
