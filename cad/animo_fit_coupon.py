@@ -102,6 +102,39 @@ MINI_PINS  = [6.00, 5.75, 5.70]
 PARTS += [("mini_female_round", female("round", MINI_HOLES)),
           ("mini_male_round", male("round", MINI_PINS))]
 
+# LEGO Technic coupon (2026-10-20): holes for real LEGO friction pins and
+# axles, one module deep (7.8, like the wall's bosses), the pin holes with
+# the collar's counterbore. Labelled with the drawn size; the cube's macro
+# draws them at LEGO size + 0.27 in PETG (pin 5.07, cross 5.07 / 2.07).
+TECH_T      = 7.8
+TECH_PINS   = [4.95, 5.00, 5.05, 5.10, 5.15, 5.20, 5.25]
+TECH_CROSS  = [4.97, 5.02, 5.07, 5.12, 5.17]     # tip to tip; arms = tip - 3.0
+TECH_CB     = (6.47, 0.8)                        # counterbore, as on the wall
+
+
+def cross_z(span, arm, x, z0, z1):
+    a = Part.makeBox(span, arm, z1 - z0, v(x - span / 2.0, ROW_Y - arm / 2.0, z0))
+    b = Part.makeBox(arm, span, z1 - z0, v(x - arm / 2.0, ROW_Y - span / 2.0, z0))
+    return a.fuse(b).removeSplitter()
+
+
+def technic(kind):
+    sizes = TECH_PINS if kind == "pin" else TECH_CROSS
+    plate = Part.makeBox(len(sizes) * PITCH, WIDTH, TECH_T)
+    for i, size in enumerate(sizes):
+        x = PITCH / 2.0 + i * PITCH
+        if kind == "pin":
+            plate = plate.cut(feature("round", size, x, -1, TECH_T + 1))
+            plate = plate.cut(feature("round", TECH_CB[0], x, TECH_T - TECH_CB[1],
+                                      TECH_T + 1))
+        else:
+            plate = plate.cut(cross_z(size, size - 3.0, x, -1, TECH_T + 1))
+        plate = plate.cut(label(f"{round(size * 100)}", x, TECH_T))
+    return plate.removeSplitter()
+
+
+PARTS += [("technic_pin", technic("pin")), ("technic_cross", technic("cross"))]
+
 _here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() \
     else App.getUserMacroDir(True)
 _dir = os.path.join(_here, "stl", "coupon")
