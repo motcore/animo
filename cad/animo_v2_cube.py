@@ -189,7 +189,7 @@ TECH_PINS    = [(-2, 2), (-1, -2), (1, -2)]
 TECH_SHORT   = {}     # mm — bosses cut short where a full 7.8 won't fit
 tech_cross   = 4.8    # mm — axle's cross, tip to tip
 tech_cross_w = 1.8    # mm — width of its arms
-cross_try    = [0.07]   # extra hubs to print with this cross grow (PETG)
+cross_try    = []     # extra hubs to print with other cross grows (PETG)
 hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
                       #      (PLA, arcs off: the 6.0 socket printed 5.90)
 pin_grow     = hole_grow   # mm — LEGO pin holes (PETG: measured, below)
@@ -280,10 +280,9 @@ tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amaz
 if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20):
                          # press +0.05, sliding +0.25; holes print ~0.27 small
     hub_clear = 0.125        # hub's hole: sliding, +0.25 on the diameter
-    hole_grow = 0.12         # LEGO axle's cross: on the Technic coupon 4.97 / 1.97,
-                             #      its smallest, felt best; in the hub (6.5 deep)
-                             #      it was too loose (2026-10-20): 4.92, and a 4.87
-                             #      hub to try (cross_try)
+    hole_grow = 0.07         # LEGO axle's cross: 4.87 / 1.87. The coupon's 4.97
+                             #      was too loose in the hub (6.5 deep); of two hubs
+                             #      printed, 4.92 and 4.87, the 4.87 won (2026-10-21)
     pin_grow = 0.15          # LEGO pin holes: on the Technic coupon (2026-10-20)
                              #      4.95 felt most like a real beam (5.00 close)
     horn_hub_grow += 0.05    # horn hub's press fit — an estimate, to confirm
