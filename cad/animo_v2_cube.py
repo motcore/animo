@@ -213,7 +213,8 @@ post_step  = 4.0    # mm — height of the lower post's step under the gear
 # The cable passage: through every deck and the brain's floor, off-centre in
 # X so the boards' cradles clear it, symmetric in Y so both decks match.
 cable_hole = (-7.0, -0.5, -5.0, 5.0)   # mm — x0, x1, y0, y1, inside the pack's hole
-brain_wall = 2.0    # mm — the brain box's side walls
+brain_wall = 1.6    # mm — the brain box's side walls: 4 perimeters. 2.0 in the
+                    #      57.9 cube; the 56 one needs the room (2026-10-21)
 brain_floor = 2.0   # mm — it rests on the deck all over, so thin is fine
 brain_screw_head = 5.5   # mm — M3 cap head, inside the brain
 lid_t      = 3.0    # mm
@@ -243,7 +244,7 @@ BOARDS = [
 # its long sides (between the battery rails and the box walls).
 # The charging socket: a panel-mount USB-C with two wires (LYMISPIYA) into
 # the DAOKAI's VIN/GND. PLACEHOLDER sizes until it arrives — MEASURE.
-chg_xy   = (0.0, -22.6)              # mm — centre in the lid
+chg_xy   = (0.0, -23.0)              # mm — centre in the lid
 chg_body  = (12.00, 5.39, 9.10)      # mm — LYMISPIYA panel USB-C, measured 2026-10-21
                                      #      (+0.04): body X, Y, and its depth under the
                                      #      bezel (11.00 overall - 1.90 bezel)
@@ -258,9 +259,11 @@ chg_cut   = (chg_body[0] + 0.25, chg_body[1] + 0.25)   # mm — lid cutout: a sl
 sw_cut   = (13.5, 9.0)    # mm — lid cutout (X x Y): ~0.2 a side
 sw_body  = (13.1, 8.4, 15.6)   # mm — under the lid's top, lugs and all
 sw_bezel = (15.12, 10.5, 2.0)  # mm — the face on top of the lid
-sw_xy    = (0.0, 22.6)         # mm — centre in the lid
+sw_xy    = (0.0, 21.9)         # mm — centre in the lid: 0.3 off the wall
 battery = (52.0, 33.55, 10.24)  # CITYORK 103450 2000 mAh, measured: too long for
                                 # an end frame — the brain's walls stop its ends
+batt_y  = -1.6   # mm — battery off centre toward the charging socket, so the
+                 #      switch's strip on +y is wide enough in the 56 mm cube
 # Holding them: each board drops into a CRADLE on the floor (a low wall
 # round its outline; the ESP32 rests on a ledge under two snap lips, the
 # DAOKAI on a foam pad); the ESP32's USB end butts the box wall, which is why
@@ -815,10 +818,10 @@ def make_brain_lid():
     l = box(-y_wo, y_wo, -y_wo, y_wo, z_lid0, z_top)
     L, W, H = battery
     fy = W / 2 + frame_clr                 # two rails along its long sides; its
-    rails = [box(-L / 2 + 3, L / 2 - 3, sy * fy, sy * (fy + frame_t),   # ends
-                 z_lid0 - frame_h, z_lid0 + 0.01) if sy > 0 else        # meet the
-             box(-L / 2 + 3, L / 2 - 3, -fy - frame_t, -fy,             # box walls
-                 z_lid0 - frame_h, z_lid0 + 0.01) for sy in (1, -1)]
+    rails = [box(-L / 2 + 3, L / 2 - 3, batt_y + fy, batt_y + fy + frame_t,  # ends
+                 z_lid0 - frame_h, z_lid0 + 0.01),                      # meet the
+             box(-L / 2 + 3, L / 2 - 3, batt_y - fy - frame_t, batt_y - fy,  # box
+                 z_lid0 - frame_h, z_lid0 + 0.01)]                      # walls
     l = l.fuse(rails).removeSplitter()
     x, y = sw_xy                           # the switch, snapped in from above
     l = l.cut(box(x - sw_cut[0] / 2, x + sw_cut[0] / 2, y - sw_cut[1] / 2,
@@ -869,7 +872,8 @@ def make_fix_screws():
 
 def make_battery():
     L, W, H = battery
-    return box(-L / 2, L / 2, -W / 2, W / 2, z_lid0 - tape_t - H, z_lid0 - tape_t)
+    return box(-L / 2, L / 2, batt_y - W / 2, batt_y + W / 2,
+               z_lid0 - tape_t - H, z_lid0 - tape_t)
 
 
 # Gear phases: servo gear arbitrary, the rest follow the mesh.
