@@ -235,14 +235,18 @@ BOARDS = [
          pcb=0.9, lift=2.0, h=4.0,
          lips=True, open=("+x",), usb=(8.9, 1.9, 2.0)),
     dict(name="Power",                     # DAOKAI: charge + 5 V 2 A boost. No
-         x=(-15.0, 10.0), y=(6.6, 22.6),  # USB: charging comes in on its VIN
+         x=(1.1, 26.1), y=(3.6, 19.6),    # USB: charging comes in on its VIN
          pcb=1.6, lift=3.0, h=6.1,         # pad. Only 0.4 clear by its long
-         lips=False, open=("+y",), usb=None),   # edges, so no lips: it sits on
+         lips=False, open=("+y", "+x"), usb=None),   # edges, so no lips: it sits on
 ]                                          # a 3 mm foam pad (the lift). Laid
                                            # component side up, pads to -X
                                            # (toward the split board), its side
                                            # button (1 mm proud) faces +Y
-                                           # (checked on the board, 2026-10-22)
+                                           # (checked on the board, 2026-10-22).
+                                           # Its 4 charge LEDs sit centred on
+                                           # the +X end: that end goes against
+                                           # the +X wall, beside the ESP32's
+                                           # USB window (user, 2026-10-22)
 # Both live in the lid, one in each of the strips the battery leaves along
 # its long sides (between the battery rails and the box walls).
 # The charging socket: a panel-mount USB-C with two wires (LYMISPIYA) into
