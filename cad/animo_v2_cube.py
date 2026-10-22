@@ -277,7 +277,7 @@ battery = (52.0, 33.55, 10.24)  # CITYORK 103450 2000 mAh, measured: too long fo
 batt_y  = -1.6   # mm — battery off centre toward the charging socket, so the
                  #      switch's strip on +y is wide enough in the 56 mm cube
 # Holding them: each board drops into a CRADLE on the floor (a low wall
-# round its outline; the ESP32 rests on a ledge under two snap lips, the
+# round its outline; the ESP32 rests on two end rests, taped down, the
 # DAOKAI on a foam pad); the ESP32's USB end butts the box wall, which is why
 # that side of its cradle is open. The battery sits under the lid between two
 # rails, on a foam pad, and comes out with the lid.
@@ -302,9 +302,9 @@ sb_post_h  = 5.0    # mm — the two slotted posts that hold the board upright
 sb_slot    = 0.3    # mm — slot clearance round the perfboard
 cradle_w   = 1.2    # mm — cradle wall
 cradle_clr = 0.3    # mm — board to cradle wall
-ledge_w    = 1.0    # mm — the ledge the board rests on, inside the wall
-lip        = 0.4    # mm — snap lip overhang over the board's edge
-lip_h      = 0.8    # mm
+rest_end   = 1.0    # mm — ESP32's rest strip under its -X end (its first pins
+                    #      are ~2.2 in: their joints stay clear)
+rest_pad   = 0.7    # mm — the two corner pads under its USB end
 comp_inset = 0.6    # mm — components keep this far from the long edges (ESP32)
 frame_h    = 6.0    # mm — battery frame depth under the lid
 frame_t    = 1.2    # mm
@@ -854,8 +854,12 @@ def make_switch():
 
 
 def make_cradles():
-    """One cradle per board: wall, ledge and two snap lips; the side toward
-    the box wall stays open (the board's USB end butts that wall)."""
+    """One cradle per board: a low wall round it, open on the sides listed.
+    A board with `lips` (the ESP32) rests on rests only where it has no pins:
+    a strip at its -X end and two corner pads at its USB end, so the solder
+    joints of its pin rows hang free; double-sided tape holds it. (Snap lips
+    and a ledge all round, 2026-10-22, were too stiff in PETG and sat under
+    the soldered pins.)"""
     zf = z_floor - 0.01                    # the floor
     out = []
     for bd in BOARDS:
@@ -865,7 +869,7 @@ def make_cradles():
         c = cradle_clr
         X0 = max(x0 - c - cradle_w, -b_in + 0.01)
         X1 = min(x1 + c + cradle_w, b_in - 0.01)
-        top = z_pcb1 + (lip_h if bd["lips"] else 0.0)
+        top = z_pcb1
         wall = box(X0, X1, y0 - c - cradle_w, y1 + c + cradle_w, zf, top)
         wall = wall.cut(box(x0 - c, x1 + c, y0 - c, y1 + c, zf - 1, top + 1))
         cuts = {"+x": box(x1, X1 + 1, y0 - c - cradle_w - 1, y1 + c + cradle_w + 1, zf - 1, top + 1),
@@ -875,12 +879,10 @@ def make_cradles():
         for side in bd["open"]:
             wall = wall.cut(cuts[side])
         parts = []
-        if bd["lips"]:                     # ledge to rest on, lips to snap under
-            parts.append(box(x0 - c, x1 + c, y0 - c, y1 + c, zf, z_pcb0).cut(
-                box(x0 + ledge_w, x1 - ledge_w, y0 + ledge_w, y1 - ledge_w,
-                    zf - 1, z_pcb0 + 1)))
-            parts += [box(x0 + 2.0, x1 - 2.0, y0 - c - 0.01, y0 + lip, z_pcb1, z_pcb1 + lip_h),
-                      box(x0 + 2.0, x1 - 2.0, y1 - lip, y1 + c + 0.01, z_pcb1, z_pcb1 + lip_h)]
+        if bd["lips"]:                     # rests clear of the pin rows
+            parts.append(box(x0 - c, x0 + rest_end, y0 - c, y1 + c, zf, z_pcb0))
+            for ya, yb in ((y0 - c, y0 + rest_pad), (y1 - rest_pad, y1 + c)):
+                parts.append(box(x1 - rest_pad, x1 + c, ya, yb, zf, z_pcb0))
         out.append(wall.fuse(parts) if parts else wall)
     return out
 
@@ -913,7 +915,7 @@ def make_brain_lid():
 
 def make_boards():
     """Board envelopes: the PCB, and its components kept off the long edges
-    (where the cradle's lips reach over)."""
+    (the ESP32's, kept off its long edges)."""
     out = []
     for bd in BOARDS:
         (x0, x1), (y0, y1) = bd["x"], bd["y"]
