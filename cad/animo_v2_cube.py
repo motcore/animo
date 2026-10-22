@@ -269,6 +269,25 @@ batt_y  = -1.6   # mm — battery off centre toward the charging socket, so the
 # DAOKAI on a foam pad); the ESP32's USB end butts the box wall, which is why
 # that side of its cradle is open. The battery sits under the lid between two
 # rails, on a foam pad, and comes out with the lid.
+# The split board (2026-10-22): a scrap of 2.54 mm perfboard standing against
+# the brain's -X wall, a 3 x 4 block of header pins on it. The four servos'
+# own plugs go in sideways, stacked, and end at the cable passage, so each
+# servo cable comes up through it and straight into its plug. 5 V from the
+# DAOKAI (through the switch) and GND feed the block's two power rows and
+# the ESP32; four signal wires go to GPIO 4, 5, 6 and 7. All under the
+# battery. Swapping a wall: lid off, unplug its servo here, pull the cable
+# down the passage as the module slides out.
+sb_gap     = 1.5    # mm — board's back (its solder joints) off the wall
+sb_t       = 1.6    # mm — perfboard
+sb_pitch   = 2.54   # mm
+sb_hdr     = 2.5    # mm — header's plastic strip
+plug_len   = 14.0   # mm — a servo plug (JR / Dupont 3-pin housing)
+plug_h     = 3 * 2.54    # mm — its three contacts, vertical
+plug_n     = 4
+sb_y_c     = 0.9    # mm — centre of the stack in Y: clear of the DAOKAI (+Y)
+sb_z0      = 0.5    # mm — plugs' underside above the brain's floor
+sb_post_h  = 5.0    # mm — the two slotted posts that hold the board upright
+sb_slot    = 0.3    # mm — slot clearance round the perfboard
 cradle_w   = 1.2    # mm — cradle wall
 cradle_clr = 0.3    # mm — board to cradle wall
 ledge_w    = 1.0    # mm — the ledge the board rests on, inside the wall
@@ -743,7 +762,7 @@ def make_brain_base():
     bosses = [box(*sorted((sx * (b_in - lid_boss), sx * b_in + sx * 0.01)),
                   *sorted((sy * (b_in - lid_boss), sy * b_in + sy * 0.01)),
                   z_floor - 0.01, z_lid0) for sx, sy in LID_CORNERS]
-    b = b.fuse([shell] + bosses + make_cradles()).removeSplitter()
+    b = b.fuse([shell] + bosses + make_cradles() + make_sb_posts()).removeSplitter()
     b = b.cut(box(*cable_hole, y_wo - 1, z_floor + 1))
     cxy = y_wo - screw_in
     for sx, sy in FIX_CORNERS:
@@ -768,6 +787,45 @@ def make_charge_port():
     bezel = box(x - chg_bezel[0] / 2, x + chg_bezel[0] / 2, y - chg_bezel[1] / 2,
                 y + chg_bezel[1] / 2, z_top, z_top + chg_bezel[2])
     return body.fuse(bezel)
+
+
+def make_split_board():
+    """The split board and its header block, standing on the -X wall."""
+    x0 = -b_in + sb_gap
+    w = plug_n * sb_pitch
+    y0, y1 = _sb_y_ends()
+    z0 = z_floor                                  # stands on the floor
+    board = box(x0, x0 + sb_t, y0, y1, z0, z0 + sb_z0 + plug_h + 1.0)
+    hdr = box(x0 + sb_t, x0 + sb_t + sb_hdr, sb_y_c - w / 2, sb_y_c + w / 2,
+              z_floor + sb_z0, z_floor + sb_z0 + plug_h)
+    return board.fuse(hdr)
+
+
+def _sb_y_ends():
+    w = plug_n * sb_pitch
+    return sb_y_c - w / 2 - 1.0, sb_y_c + w / 2 + 1.0
+
+
+def make_sb_posts():
+    """Two posts on the brain's floor, each with a slot for one end of the
+    split board: it slides in from above and stands upright."""
+    x0 = -b_in + sb_gap
+    out = []
+    for y_end, k in zip(_sb_y_ends(), (-1, 1)):
+        post = box(x0 - 1.2, x0 + sb_t + 1.2, *sorted((y_end - k * 0.8, y_end + k * 1.5)),
+                   z_floor - 0.01, z_floor + sb_post_h)
+        slot = box(x0 - sb_slot / 2, x0 + sb_t + sb_slot / 2,
+                   *sorted((y_end - k * 1.0, y_end + k * sb_slot)), z_floor, z_floor + sb_post_h + 1)
+        out.append(post.cut(slot))
+    return out
+
+
+def make_servo_plugs():
+    """The four servo plugs, side by side in Y, pointing +X to the passage."""
+    x1 = -b_in + sb_gap + sb_t + sb_hdr
+    w = plug_n * sb_pitch
+    return box(x1, x1 + plug_len, sb_y_c - w / 2, sb_y_c + w / 2,
+               z_floor + sb_z0, z_floor + sb_z0 + plug_h)
 
 
 def make_switch():
@@ -921,6 +979,8 @@ PARTS.append(("BrainLid", make_brain_lid(), (0.45, 0.55, 0.75), 60))
 PARTS += [(n, sh, (0.15, 0.50, 0.25), 0) for n, sh in make_boards()]
 PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 0))
 PARTS.append(("Switch", make_switch(), (0.15, 0.15, 0.15), 0))
+PARTS.append(("SplitBoard", make_split_board(), (0.15, 0.50, 0.25), 0))
+PARTS.append(("ServoPlugs", make_servo_plugs(), (0.20, 0.20, 0.20), 0))
 PARTS.append(("ChargePort", make_charge_port(), (0.15, 0.15, 0.15), 0))
 
 DOC_NAME = "Animo_v2"
@@ -939,7 +999,8 @@ for _obj in list(doc.Objects):
         continue
     _w = _obj.Name.rsplit("_", 1)[-1] if "_" in _obj.Name else ""
     _label = WALL_LABEL.get(_w, "Marco")
-    if _obj.Name.startswith(("Brain", "Switch", "Battery", "ChargePort")
+    if _obj.Name.startswith(("Brain", "Switch", "Battery", "ChargePort", "Split",
+                             "ServoPlugs")
                             + tuple(b["name"] for b in BOARDS)):
         _label = "Cerebro"
     if _obj.Name.startswith("Tech"):
@@ -987,6 +1048,7 @@ ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("Battery", "BrainLid"),        # taped into its frame
            ("Switch", "BrainLid"),         # snapped into its cutout
            ("ChargePort", "BrainLid"),     # panel-mounted in its cutout
+           ("SplitBoard", "BrainBase"),    # stands in its two slotted posts
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
            ("TechPin", "Wall"),                                # in its hole
@@ -1062,6 +1124,13 @@ if RUN_CHECKS:
     left = col_foot_w - screw_in - m3_pilot / 2.0
     checks.append(("column foot: plastic round the M3 pilot, inner faces", left,
                    ">= 1.0", left >= 1.0))
+    sp_end = -b_in + sb_gap + sb_t + sb_hdr + plug_len
+    checks.append(("servo plugs end at the cable passage (x)", sp_end,
+                   f"within {cable_hole[0]:+.1f} +- 1", abs(sp_end - cable_hole[0]) <= 1.0))
+    for o in ("Battery", "Power", "Esp32", "Switch", "BrainLid", "BrainBase"):
+        for n in (("ServoPlugs",) if o == "BrainBase" else ("SplitBoard", "ServoPlugs")):
+            g = gap(n, o)
+            checks.append((f"gap {n} / {o}", g, "> 0.3", g > 0.3))
     checks.append(("output's cross hole depth", cross_depth(), ">= 6, a good grip",
                    cross_depth() >= 6.0))
     # A wall comes out without opening the cube: the north module slides out
