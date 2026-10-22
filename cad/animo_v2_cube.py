@@ -223,9 +223,11 @@ lid_screw_in = 4.5  # mm — lid screws in from the edges
 # The switch and the charging socket sit in the LID, wired with some slack
 # (user, 2026-10-17); the ESP32's own USB-C stays reachable through a window
 # in the +X side, so the firmware can be changed without opening anything.
-led_win = (9.0, 2.6)    # mm — PROVISIONAL slot in the +X wall over the DAOKAI's
-                        #      charge LEDs (Y x Z), from its PCB's top up; to refine
-                        #      once the LEDs are measured (O1.2-e, 2026-10-22)
+led_win = (12.0, 5.0)   # mm — the +X wall goes THIN over the DAOKAI's charge LEDs
+led_skin = 0.6          #      (Y x Z, from the PCB's top up): a pocket from inside
+                        #      leaves this much wall, and printed in WHITE PETG the
+                        #      LEDs glow through it (user, 2026-10-22). Not measured
+                        #      yet: the patch is generous (O1.2-e)
 usb_win = (12.5, 7.0)   # mm — window for a USB-C PLUG's overmould (W x H): the
                         #      plug has to reach the receptacle through the wall
 # The boards, measured 2026-10-17 (calliper +0.04). x0..x1, y0..y1 is the PCB;
@@ -782,7 +784,7 @@ def make_brain_base():
                         m3_pilot / 2.0, z_lid0 - 8.0, z_lid0 + 1))
     pw = next(bd for bd in BOARDS if bd["name"] == "Power")   # its LED slot
     yc, zp = sum(pw["y"]) / 2.0, z_floor + pw["lift"] + pw["pcb"]
-    b = b.cut(box(b_in - 1, y_wo + 1, yc - led_win[0] / 2, yc + led_win[0] / 2,
+    b = b.cut(box(b_in - 1, y_wo - led_skin, yc - led_win[0] / 2, yc + led_win[0] / 2,
                   zp, zp + led_win[1]))
     for bd in BOARDS:                      # USB-C plug window, +X wall
         if not bd["usb"]:
