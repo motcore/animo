@@ -237,9 +237,12 @@ BOARDS = [
     dict(name="Power",                     # DAOKAI: charge + 5 V 2 A boost. No
          x=(-15.0, 10.0), y=(6.6, 22.6),  # USB: charging comes in on its VIN
          pcb=1.6, lift=3.0, h=6.1,         # pad. Only 0.4 clear by its long
-         lips=False, open=("-y",), usb=None),   # edges, so no lips: it sits on
-]                                          # a 3 mm foam pad (the lift). Its
-                                           # side button (1 mm proud) is on -y
+         lips=False, open=("+y",), usb=None),   # edges, so no lips: it sits on
+]                                          # a 3 mm foam pad (the lift). Laid
+                                           # component side up, pads to -X
+                                           # (toward the split board), its side
+                                           # button (1 mm proud) faces +Y
+                                           # (checked on the board, 2026-10-22)
 # Both live in the lid, one in each of the strips the battery leaves along
 # its long sides (between the battery rails and the box walls).
 # The charging socket: a panel-mount USB-C with two wires (LYMISPIYA) into
@@ -284,7 +287,7 @@ sb_hdr     = 2.5    # mm — header's plastic strip
 plug_len   = 14.0   # mm — a servo plug (JR / Dupont 3-pin housing)
 plug_h     = 3 * 2.54    # mm — its three contacts, vertical
 plug_n     = 4
-sb_y_c     = 0.9    # mm — centre of the stack in Y: clear of the DAOKAI (+Y)
+sb_y_c     = -0.6   # mm — centre of the stack in Y: clear of the DAOKAI's cradle (+Y)
 sb_z0      = 0.5    # mm — plugs' underside above the brain's floor
 sb_post_h  = 5.0    # mm — the two slotted posts that hold the board upright
 sb_slot    = 0.3    # mm — slot clearance round the perfboard
