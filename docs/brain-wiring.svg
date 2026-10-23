@@ -89,7 +89,7 @@
     <polyline points="244.4,168 228,168 228,145" stroke="#ba7517" stroke-width="2"/>
     <polyline points="244.4,152.8 232,152.8 232,145" stroke="#888780" stroke-width="2"/>
     <!-- OUT-5V to the switch, switch to the split board's + row -->
-    <polyline points="244.4,198.5 240,198.5 240,-11.6" stroke="#e24b4a" stroke-width="2"/>
+    <polyline points="244.4,198.5 219,198.5 219,-11.6" stroke="#e24b4a" stroke-width="2"/>
     <polyline points="200,-11.6 200,40 112,40 112,190 84,190 84,197.1" stroke="#e24b4a" stroke-width="2"/>
     <!-- GND next to OUT to the split board's - row -->
     <polyline points="244.4,183.3 120,183.3 120,193 88,193 88,197.1" stroke="#888780" stroke-width="2"/>
@@ -106,6 +106,16 @@
     <polyline points="76,270.1 76,358 336.6,358 336.6,345" stroke="#ef9f27" stroke-width="1.2"/>
   </g>
 
+
+  <!-- JST connectors (2-pin PH): plug/socket pairs -->
+  <g font-size="10" fill="#222">
+    <rect x="223" y="134" width="14" height="8" fill="#222"/>
+    <text x="221" y="132" text-anchor="end">JST</text>
+    <rect x="224" y="394" width="14" height="8" fill="#222"/>
+    <text x="222" y="392" text-anchor="end">JST</text>
+    <rect x="215" y="179" width="8" height="24" fill="#222"/>
+    <text x="211" y="176" text-anchor="end">JST</text>
+  </g>
   <!-- scale -->
   <line x1="62" y1="470" x2="122" y2="470" stroke="#333"/>
   <line x1="62" y1="466" x2="62" y2="474" stroke="#333"/><line x1="122" y1="466" x2="122" y2="474" stroke="#333"/>
@@ -121,11 +131,13 @@
   <rect x="430" y="210" width="30" height="16" fill="none" stroke="#555" stroke-dasharray="4 3"/><text class="t" x="470" y="222">In the lid</text>
   <rect x="430" y="236" width="30" height="16" fill="#d9d9d9"/><text class="t" x="470" y="248">Lid screw bosses</text>
   <circle cx="445" cy="272" r="8" fill="none" stroke="#888" stroke-width="0.8"/><text class="t" x="470" y="276">M3 screw heads</text>
-  <text class="ts" x="430" y="310">The switch cuts +5 V only;</text>
-  <text class="ts" x="430" y="326">GND runs straight through.</text>
-  <text class="ts" x="430" y="350">Routes are indicative; parts,</text>
-  <text class="ts" x="430" y="366">pads and pins are placed as</text>
-  <text class="ts" x="430" y="382">in animo_v2_cube.py.</text>
-  <text class="ts" x="430" y="406">Scale 1 mm = 6 px</text>
+  <rect x="438" y="291" width="14" height="8" fill="#222"/><text class="t" x="470" y="300">JST connector</text>
+  <text class="ts" x="430" y="322">The switch cuts +5 V only, wired</text>
+  <text class="ts" x="430" y="338">direct with slack to lift the lid;</text>
+  <text class="ts" x="430" y="354">GND runs straight through.</text>
+  <text class="ts" x="430" y="378">Routes are indicative; parts,</text>
+  <text class="ts" x="430" y="394">pads and pins are placed as</text>
+  <text class="ts" x="430" y="410">in animo_v2_cube.py.</text>
+  <text class="ts" x="430" y="434">Scale 1 mm = 6 px</text>
   </g>
 </svg>
