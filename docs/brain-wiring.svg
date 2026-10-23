@@ -1,12 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="470" viewBox="0 0 680 470" font-family="Helvetica, Arial, sans-serif" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="600" viewBox="0 0 680 600" font-family="Helvetica, Arial, sans-serif" role="img">
   <title>Animo brain wiring, top view to scale</title>
-  <desc>Top view of the 56 mm Animo brain box with the lid off, boards component side up, at 6 px per mm. The DAOKAI charge and 5 V board lies against the +X wall above the ESP32-C3, its six pads facing the centre. The split board stands against the -X wall; four servo plugs reach the cable passage. The switch and the charging USB-C sit in the lid (dashed); the battery is taped under the lid (dashed).</desc>
+  <desc>Top view of the 56 mm Animo brain box with the lid off, boards component side up, at 6 px per mm. The DAOKAI charge and 5 V board lies against the +X wall above the ESP32-C3, its six pads facing the centre. The split board stands against the -X wall; four servo plugs reach the cable passage. The switch and the charging USB-C sit in the lid, drawn outside the box (dashed); the battery is taped under the lid (dashed).</desc>
   <style>
     .t  { font-size: 14px; fill: #222; }
     .ts { font-size: 12px; fill: #555; }
     .th { font-size: 14px; font-weight: bold; fill: #222; }
   </style>
-  <rect width="680" height="470" fill="#ffffff"/>
+  <rect width="680" height="600" fill="#ffffff"/>
+  <g transform="translate(0,70)">
 
   <!-- box: outer 56, inner 52.8 -->
   <rect x="62" y="62" width="336" height="336" rx="2" fill="none" stroke="#333" stroke-width="1"/>
@@ -22,12 +23,12 @@
   <text class="ts" x="140" y="133" text-anchor="middle">battery, under the lid</text>
 
   <!-- lid parts -->
-  <rect x="184.4" y="73.4" width="91.2" height="50.4" rx="2" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="4 3"/>
-  <text class="ts" x="230" y="94" text-anchor="middle">switch</text>
-  <text class="ts" x="230" y="109" text-anchor="middle">(in the lid)</text>
-  <rect x="194" y="351.8" width="72" height="32.4" rx="2" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="4 3"/>
-  <text class="ts" x="230" y="366" text-anchor="middle">charging USB-C</text>
-  <text class="ts" x="230" y="379" text-anchor="middle">(in the lid)</text>
+  <rect x="184.4" y="-62" width="91.2" height="50.4" rx="2" fill="#ffffff" stroke="#555" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="ts" x="230" y="-41" text-anchor="middle">switch</text>
+  <text class="ts" x="230" y="-26" text-anchor="middle">(in the lid)</text>
+  <rect x="194" y="408" width="72" height="32.4" rx="2" fill="#ffffff" stroke="#555" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="ts" x="230" y="422" text-anchor="middle">charging USB-C</text>
+  <text class="ts" x="230" y="435" text-anchor="middle">(in the lid)</text>
 
   <!-- DAOKAI -->
   <rect x="236.6" y="112.4" width="150" height="96" rx="2" fill="#d4ecc8" stroke="#3b6d11" stroke-width="0.6"/>
@@ -88,13 +89,13 @@
     <polyline points="244.4,168 228,168 228,145" stroke="#ba7517" stroke-width="2"/>
     <polyline points="244.4,152.8 232,152.8 232,145" stroke="#888780" stroke-width="2"/>
     <!-- OUT-5V to the switch, switch to the split board's + row -->
-    <polyline points="244.4,198.5 240,198.5 240,123.8" stroke="#e24b4a" stroke-width="2"/>
-    <polyline points="184.4,100 112,100 112,190 84,190 84,197.1" stroke="#e24b4a" stroke-width="2"/>
+    <polyline points="244.4,198.5 240,198.5 240,-11.6" stroke="#e24b4a" stroke-width="2"/>
+    <polyline points="200,-11.6 200,40 112,40 112,190 84,190 84,197.1" stroke="#e24b4a" stroke-width="2"/>
     <!-- GND next to OUT to the split board's - row -->
     <polyline points="244.4,183.3 120,183.3 120,193 88,193 88,197.1" stroke="#888780" stroke-width="2"/>
     <!-- charging USB-C to VIN / GND -->
-    <polyline points="244.4,122.3 236,122.3 236,128 233,128 233,351.8" stroke="#185fa5" stroke-width="2"/>
-    <polyline points="244.4,137.5 238,137.5 238,142 229.5,142 229.5,351.8" stroke="#888780" stroke-width="2"/>
+    <polyline points="244.4,122.3 236,122.3 236,128 233,128 233,408" stroke="#185fa5" stroke-width="2"/>
+    <polyline points="244.4,137.5 238,137.5 238,142 229.5,142 229.5,408" stroke="#888780" stroke-width="2"/>
     <!-- split board to the ESP32: 5V, G, GPIO4 -->
     <polyline points="84,270.1 84,282 241,282 241,236 367.1,236 367.1,245" stroke="#e24b4a" stroke-width="1.5"/>
     <polyline points="87,270.1 87,286 244.5,286 244.5,239 351.9,239 351.9,245" stroke="#888780" stroke-width="1.5"/>
@@ -106,10 +107,10 @@
   </g>
 
   <!-- scale -->
-  <line x1="62" y1="420" x2="122" y2="420" stroke="#333"/>
-  <line x1="62" y1="416" x2="62" y2="424" stroke="#333"/><line x1="122" y1="416" x2="122" y2="424" stroke="#333"/>
-  <text class="ts" x="92" y="440" text-anchor="middle">10 mm</text>
-  <text class="ts" x="250" y="440" text-anchor="middle">box 56 × 56 · 52.8 inside · component sides up</text>
+  <line x1="62" y1="470" x2="122" y2="470" stroke="#333"/>
+  <line x1="62" y1="466" x2="62" y2="474" stroke="#333"/><line x1="122" y1="466" x2="122" y2="474" stroke="#333"/>
+  <text class="ts" x="92" y="490" text-anchor="middle">10 mm</text>
+  <text class="ts" x="250" y="490" text-anchor="middle">box 56 × 56 · 52.8 inside · component sides up</text>
 
   <!-- legend -->
   <line x1="430" y1="80" x2="460" y2="80" stroke="#e24b4a" stroke-width="2"/><text class="t" x="470" y="84">+5 V</text>
@@ -126,4 +127,5 @@
   <text class="ts" x="430" y="366">pads and pins are placed as</text>
   <text class="ts" x="430" y="382">in animo_v2_cube.py.</text>
   <text class="ts" x="430" y="406">Scale 1 mm = 6 px</text>
+  </g>
 </svg>
