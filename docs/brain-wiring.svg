@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="470" viewBox="0 0 680 470" font-family="Helvetica, Arial, sans-serif" role="img">
+  <title>Animo brain wiring, top view to scale</title>
+  <desc>Top view of the 56 mm Animo brain box with the lid off, boards component side up, at 6 px per mm. The DAOKAI charge and 5 V board lies against the +X wall above the ESP32-C3, its six pads facing the centre. The split board stands against the -X wall; four servo plugs reach the cable passage. The switch and the charging USB-C sit in the lid (dashed); the battery is taped under the lid (dashed).</desc>
+  <style>
+    .t  { font-size: 14px; fill: #222; }
+    .ts { font-size: 12px; fill: #555; }
+    .th { font-size: 14px; font-weight: bold; fill: #222; }
+  </style>
+  <rect width="680" height="470" fill="#ffffff"/>
+
+  <!-- box: outer 56, inner 52.8 -->
+  <rect x="62" y="62" width="336" height="336" rx="2" fill="none" stroke="#333" stroke-width="1"/>
+  <rect x="71.7" y="71.7" width="316.6" height="316.6" fill="#fafafa" stroke="#333" stroke-width="0.5"/>
+  <!-- lid screw bosses, brain fixing screw heads -->
+  <rect x="71.7" y="71.7" width="30" height="30" fill="#d9d9d9"/>
+  <rect x="358.3" y="358.3" width="30" height="30" fill="#d9d9d9"/>
+  <circle cx="374" cy="86" r="16.5" fill="none" stroke="#888" stroke-width="0.8"/>
+  <circle cx="86" cy="374" r="16.5" fill="none" stroke="#888" stroke-width="0.8"/>
+
+  <!-- battery under the lid -->
+  <rect x="74" y="138.8" width="312" height="201.6" fill="none" stroke="#888" stroke-width="0.8" stroke-dasharray="5 4"/>
+  <text class="ts" x="140" y="133" text-anchor="middle">battery, under the lid</text>
+
+  <!-- lid parts -->
+  <rect x="184.4" y="73.4" width="91.2" height="50.4" rx="2" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="ts" x="230" y="94" text-anchor="middle">switch</text>
+  <text class="ts" x="230" y="109" text-anchor="middle">(in the lid)</text>
+  <rect x="194" y="351.8" width="72" height="32.4" rx="2" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="ts" x="230" y="366" text-anchor="middle">charging USB-C</text>
+  <text class="ts" x="230" y="379" text-anchor="middle">(in the lid)</text>
+
+  <!-- DAOKAI -->
+  <rect x="236.6" y="112.4" width="150" height="96" rx="2" fill="#d4ecc8" stroke="#3b6d11" stroke-width="0.6"/>
+  <text class="th" x="318" y="164" text-anchor="middle">DAOKAI</text>
+  <rect x="380" y="146" width="6" height="30" fill="#e24b4a" opacity="0.8"/>
+  <text class="ts" x="372" y="196" text-anchor="end">charge LEDs</text>
+
+  <!-- ESP32-C3 -->
+  <rect x="247.1" y="240.8" width="132" height="109.2" rx="2" fill="#cdeae4" stroke="#0f6e56" stroke-width="0.6"/>
+  <rect x="379" y="268.7" width="11.5" height="53.4" fill="#666"/>
+  <text class="th" x="300" y="300" text-anchor="middle">ESP32-C3</text>
+  <text class="ts" x="300" y="316" text-anchor="middle">USB-C at the wall</text>
+
+  <!-- cable passage -->
+  <rect x="188" y="200" width="39" height="60" fill="#ffffff" stroke="#333" stroke-width="0.8"/>
+  <text class="ts" x="207.5" y="231" text-anchor="middle">cable</text>
+  <text class="ts" x="207.5" y="245" text-anchor="middle">passage</text>
+
+  <!-- split board, header, servo plugs -->
+  <rect x="80.7" y="197.1" width="9.6" height="73" fill="#3b6d11"/>
+  <rect x="90.3" y="203.1" width="15" height="61" fill="#777"/>
+  <g fill="#d3d1c7" stroke="#888" stroke-width="0.5">
+    <rect x="105.3" y="203.1" width="84" height="15.24"/>
+    <rect x="105.3" y="218.3" width="84" height="15.24"/>
+    <rect x="105.3" y="233.6" width="84" height="15.24"/>
+    <rect x="105.3" y="248.8" width="84" height="15.24"/>
+  </g>
+  <text class="ts" x="147" y="192" text-anchor="middle">4 servo plugs</text>
+  <text class="ts" x="84" y="285" text-anchor="middle">split board</text>
+
+  <!-- DAOKAI pads (component side up): VIN, GND, GND, BAT, GND, OUT-5V -->
+  <circle cx="244.4" cy="122.3" r="3" fill="#185fa5"/>
+  <circle cx="244.4" cy="137.5" r="3" fill="#888780"/>
+  <circle cx="244.4" cy="152.8" r="3" fill="#888780"/>
+  <circle cx="244.4" cy="168.0" r="3" fill="#ba7517"/>
+  <circle cx="244.4" cy="183.3" r="3" fill="#888780"/>
+  <circle cx="244.4" cy="198.5" r="3" fill="#e24b4a"/>
+  <g class="ts">
+    <text x="252" y="126">VIN</text><text x="252" y="141">GND</text><text x="252" y="156">GND</text>
+    <text x="252" y="172">BAT</text><text x="252" y="187">GND</text><text x="252" y="202">OUT-5V</text>
+  </g>
+
+  <!-- ESP32 pins -->
+  <circle cx="367.1" cy="248.4" r="3" fill="#e24b4a"/>
+  <circle cx="351.9" cy="248.4" r="3" fill="#888780"/>
+  <circle cx="321.4" cy="248.4" r="3" fill="#ef9f27"/>
+  <circle cx="367.1" cy="342.4" r="3" fill="#ef9f27"/>
+  <circle cx="351.9" cy="342.4" r="3" fill="#ef9f27"/>
+  <circle cx="336.6" cy="342.4" r="3" fill="#ef9f27"/>
+  <g class="ts" text-anchor="middle">
+    <text x="367" y="262">5V</text><text x="352" y="262">G</text><text x="321" y="262">4</text>
+    <text x="367" y="334">5</text><text x="352" y="334">6</text><text x="337" y="334">7</text>
+  </g>
+
+  <!-- wires -->
+  <g fill="none" stroke-linejoin="round">
+    <!-- battery to BAT / GND -->
+    <polyline points="244.4,168 228,168 228,145" stroke="#ba7517" stroke-width="2"/>
+    <polyline points="244.4,152.8 232,152.8 232,145" stroke="#888780" stroke-width="2"/>
+    <!-- OUT-5V to the switch, switch to the split board's + row -->
+    <polyline points="244.4,198.5 240,198.5 240,123.8" stroke="#e24b4a" stroke-width="2"/>
+    <polyline points="184.4,100 112,100 112,190 84,190 84,197.1" stroke="#e24b4a" stroke-width="2"/>
+    <!-- GND next to OUT to the split board's - row -->
+    <polyline points="244.4,183.3 120,183.3 120,193 88,193 88,197.1" stroke="#888780" stroke-width="2"/>
+    <!-- charging USB-C to VIN / GND -->
+    <polyline points="244.4,122.3 236,122.3 236,128 233,128 233,351.8" stroke="#185fa5" stroke-width="2"/>
+    <polyline points="244.4,137.5 238,137.5 238,142 229.5,142 229.5,351.8" stroke="#888780" stroke-width="2"/>
+    <!-- split board to the ESP32: 5V, G, GPIO4 -->
+    <polyline points="84,270.1 84,282 241,282 241,236 367.1,236 367.1,245" stroke="#e24b4a" stroke-width="1.5"/>
+    <polyline points="87,270.1 87,286 244.5,286 244.5,239 351.9,239 351.9,245" stroke="#888780" stroke-width="1.5"/>
+    <polyline points="89,270.1 89,290 238,290 238,232.5 321.4,232.5 321.4,245" stroke="#ef9f27" stroke-width="1.2"/>
+    <!-- split board to the ESP32: GPIO 5, 6, 7 (round the M3 head) -->
+    <polyline points="82,270.1 82,350 367.1,350 367.1,345" stroke="#ef9f27" stroke-width="1.2"/>
+    <polyline points="79,270.1 79,354 351.9,354 351.9,345" stroke="#ef9f27" stroke-width="1.2"/>
+    <polyline points="76,270.1 76,358 336.6,358 336.6,345" stroke="#ef9f27" stroke-width="1.2"/>
+  </g>
+
+  <!-- scale -->
+  <line x1="62" y1="420" x2="122" y2="420" stroke="#333"/>
+  <line x1="62" y1="416" x2="62" y2="424" stroke="#333"/><line x1="122" y1="416" x2="122" y2="424" stroke="#333"/>
+  <text class="ts" x="92" y="440" text-anchor="middle">10 mm</text>
+  <text class="ts" x="250" y="440" text-anchor="middle">box 56 × 56 · 52.8 inside · component sides up</text>
+
+  <!-- legend -->
+  <line x1="430" y1="80" x2="460" y2="80" stroke="#e24b4a" stroke-width="2"/><text class="t" x="470" y="84">+5 V</text>
+  <line x1="430" y1="108" x2="460" y2="108" stroke="#888780" stroke-width="2"/><text class="t" x="470" y="112">GND (−)</text>
+  <line x1="430" y1="136" x2="460" y2="136" stroke="#ef9f27" stroke-width="2"/><text class="t" x="470" y="140">Servo signals, GPIO 4–7</text>
+  <line x1="430" y1="164" x2="460" y2="164" stroke="#185fa5" stroke-width="2"/><text class="t" x="470" y="168">VIN, from the charger</text>
+  <line x1="430" y1="192" x2="460" y2="192" stroke="#ba7517" stroke-width="2"/><text class="t" x="470" y="196">BAT, to the battery</text>
+  <rect x="430" y="210" width="30" height="16" fill="none" stroke="#555" stroke-dasharray="4 3"/><text class="t" x="470" y="222">In the lid</text>
+  <rect x="430" y="236" width="30" height="16" fill="#d9d9d9"/><text class="t" x="470" y="248">Lid screw bosses</text>
+  <circle cx="445" cy="272" r="8" fill="none" stroke="#888" stroke-width="0.8"/><text class="t" x="470" y="276">M3 screw heads</text>
+  <text class="ts" x="430" y="310">The switch cuts +5 V only;</text>
+  <text class="ts" x="430" y="326">GND runs straight through.</text>
+  <text class="ts" x="430" y="350">Routes are indicative; parts,</text>
+  <text class="ts" x="430" y="366">pads and pins are placed as</text>
+  <text class="ts" x="430" y="382">in animo_v2_cube.py.</text>
+  <text class="ts" x="430" y="406">Scale 1 mm = 6 px</text>
+</svg>
