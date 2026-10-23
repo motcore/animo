@@ -261,13 +261,14 @@ chg_body  = (12.00, 5.39, 9.10)      # mm — LYMISPIYA panel USB-C, measured 20
                                      #      (+0.04): body X, Y, and its depth under the
                                      #      bezel (11.00 overall - 1.90 bezel)
 chg_bezel = (15.71, 9.25, 1.90)      # mm — the bezel on the lid's top face
-chg_cut   = (chg_body[0] + 0.40, chg_body[1] + 0.40)   # mm — lid cutout: a square
-                                     #      hole round a bought part slides at +0.40
-                                     #      in PETG (fit coupon; the switch's +0.4 /
-                                     #      +0.6 fits). +0.25 was too small
-                                     #      (2026-10-22). Its side clips are
-                                     #      wedges from the bezel back (to 15.0 wide):
-                                     #      they grip any panel, the 3 mm lid included
+chg_clips = 15.00                    # mm — across its two clips, at the bezel: wedges
+                                     #      on its two NARROW ends (they widen it in X),
+                                     #      widest just under the bezel, narrowing back
+chg_cut   = (chg_clips - 0.20, chg_body[1] + 0.40)   # mm — lid cutout (X x Y): in X
+                                     #      the clips bite the cutout's ends just under
+                                     #      the bezel (14.8 drawn, ~14.4 printed); in Y
+                                     #      +0.40, a slide (the body cleared by +0.25
+                                     #      would not go in, 2026-10-22)
 # Power switch: KCD11 mini rocker (3 A — the servos' current goes through it),
 # snapped into a cutout in the lid. Measured 2026-10-17: bezel 15.12 x 10.50,
 # body 13.10 x 8.40, 17.6 from the bezel's face to the lugs.
