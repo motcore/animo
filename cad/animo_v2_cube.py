@@ -301,7 +301,11 @@ plug_len   = 14.0   # mm — a servo plug (JR / Dupont 3-pin housing)
 plug_h     = 3 * 2.54    # mm — its three contacts, vertical
 plug_n     = 4
 sb_y_c     = -0.6   # mm — centre of the stack in Y: clear of the DAOKAI's cradle (+Y)
-sb_z0      = 0.5    # mm — plugs' underside above the brain's floor
+sb_z0      = 0.0    # mm — plugs' underside above the brain's floor: they sit on it
+sb_cols    = 6      # the perfboard scrap, counted in holes and cut between them:
+sb_rows    = 3      #      4 servo columns and a spare one at each end (the posts
+                    #      hold those; the 5 V and GND wires come in at the +Y one)
+                    #      by 3 rows (GND, +5 V, signal): 15.24 x 7.62
 sb_post_h  = 5.0    # mm — the two slotted posts that hold the board upright
 sb_slot    = 0.3    # mm — slot clearance round the perfboard
 cradle_w   = 1.2    # mm — cradle wall
@@ -815,15 +819,18 @@ def make_split_board():
     w = plug_n * sb_pitch
     y0, y1 = _sb_y_ends()
     z0 = z_floor                                  # stands on the floor
-    board = box(x0, x0 + sb_t, y0, y1, z0, z0 + sb_z0 + plug_h + 1.0)
+    board = box(x0, x0 + sb_t, y0, y1, z0, z0 + sb_rows * sb_pitch)
     hdr = box(x0 + sb_t, x0 + sb_t + sb_hdr, sb_y_c - w / 2, sb_y_c + w / 2,
               z_floor + sb_z0, z_floor + sb_z0 + plug_h)
     return board.fuse(hdr)
 
 
 def _sb_y_ends():
+    """The board's ends in Y: the plug block in the middle, a spare column
+    at each end."""
     w = plug_n * sb_pitch
-    return sb_y_c - w / 2 - 1.0, sb_y_c + w / 2 + 1.0
+    spare = (sb_cols - plug_n) / 2.0 * sb_pitch
+    return sb_y_c - w / 2 - spare, sb_y_c + w / 2 + spare
 
 
 def make_sb_posts():
@@ -1149,10 +1156,18 @@ if RUN_CHECKS:
     sp_end = -b_in + sb_gap + sb_t + sb_hdr + plug_len
     checks.append(("servo plugs end at the cable passage (x)", sp_end,
                    f"within {cable_hole[0]:+.1f} +- 1", abs(sp_end - cable_hole[0]) <= 1.0))
-    for o in ("Battery", "Power", "Esp32", "Switch", "BrainLid", "BrainBase"):
-        for n in (("ServoPlugs",) if o == "BrainBase" else ("SplitBoard", "ServoPlugs")):
+    for o in ("Battery", "Power", "Esp32", "Switch", "BrainLid"):
+        for n in ("SplitBoard", "ServoPlugs"):
             g = gap(n, o)
             checks.append((f"gap {n} / {o}", g, "> 0.3", g > 0.3))
+    # The plugs rest on the floor (contact, no overlap: the interference check
+    # covers it); the header block must clear the board's two posts.
+    w_sb = plug_n * sb_pitch
+    hdr = box(-b_in + sb_gap + sb_t, -b_in + sb_gap + sb_t + sb_hdr,
+              sb_y_c - w_sb / 2, sb_y_c + w_sb / 2, z_floor + sb_z0,
+              z_floor + sb_z0 + plug_h)
+    g = min(hdr.distToShape(p)[0] for p in make_sb_posts())
+    checks.append(("split board's header block clear of its posts", g, "> 0.3", g > 0.3))
     checks.append(("output's cross hole depth", cross_depth(), ">= 6, a good grip",
                    cross_depth() >= 6.0))
     # A wall comes out without opening the cube: the north module slides out
