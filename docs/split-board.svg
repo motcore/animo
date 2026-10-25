@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="480" viewBox="0 0 680 480" font-family="Helvetica, Arial, sans-serif" role="img">
+  <title>Animo split board: front and back</title>
+  <desc>A 6 by 3 hole perfboard scrap. Front: header pins in columns 2 to 5, row 1 GND, row 2 +5 V, row 3 servo signals; column 6, toward the DAOKAI, takes the power wires. Back, mirrored: rows 1 and 2 bridged with bare wire to column 6, where +5 V from the switch, GND from the DAOKAI and the ESP32's 5V and G wires are soldered; four signal wires leave row 3 for GPIO 4 to 7.</desc>
+  <style>
+    .t  { font-size: 13px; fill: #222; }
+    .ts { font-size: 11px; fill: #555; }
+    .th { font-size: 14px; font-weight: bold; fill: #222; }
+  </style>
+  <rect width="680" height="480" fill="#ffffff"/>
+
+  <!-- FRONT -->
+  <text class="th" x="170" y="40" text-anchor="middle">Front (pin side, faces the box)</text>
+  <rect x="30" y="100" width="280" height="120" rx="4" fill="#3b6d11"/>
+  <g fill="#9fbf86">
+    <circle cx="70" cy="120" r="5"/><circle cx="70" cy="160" r="5"/><circle cx="70" cy="200" r="5"/>
+    <circle cx="270" cy="120" r="5"/>
+  </g>
+  <g fill="#c9a227" stroke="#6b5413" stroke-width="1">
+    <rect x="104" y="114" width="12" height="12"/><rect x="144" y="114" width="12" height="12"/><rect x="184" y="114" width="12" height="12"/><rect x="224" y="114" width="12" height="12"/>
+    <rect x="104" y="154" width="12" height="12"/><rect x="144" y="154" width="12" height="12"/><rect x="184" y="154" width="12" height="12"/><rect x="224" y="154" width="12" height="12"/>
+    <rect x="104" y="194" width="12" height="12"/><rect x="144" y="194" width="12" height="12"/><rect x="184" y="194" width="12" height="12"/><rect x="224" y="194" width="12" height="12"/>
+  </g>
+  <circle cx="270" cy="160" r="6" fill="#ffffff" stroke="#e24b4a" stroke-width="2"/>
+  <circle cx="270" cy="200" r="6" fill="#ffffff" stroke="#888780" stroke-width="2"/>
+  <g class="ts" text-anchor="middle">
+    <text x="70" y="90">1</text><text x="110" y="90">2</text><text x="150" y="90">3</text><text x="190" y="90">4</text><text x="230" y="90">5</text><text x="270" y="90">6</text>
+  </g>
+  <g class="ts" text-anchor="middle" fill="#fff">
+    <text x="110" y="141" fill="#ffffff">S4</text><text x="150" y="141" fill="#ffffff">S5</text><text x="190" y="141" fill="#ffffff">S6</text><text x="230" y="141" fill="#ffffff">S7</text>
+  </g>
+  <text class="ts" x="20" y="124" text-anchor="end">3</text>
+  <text class="ts" x="20" y="164" text-anchor="end">2</text>
+  <text class="ts" x="20" y="204" text-anchor="end">1</text>
+  <text class="t" x="30" y="250">row 3: servo signals (orange)</text>
+  <text class="t" x="30" y="268">row 2: +5 V (red)</text>
+  <text class="t" x="30" y="286">row 1: GND (brown), mark it</text>
+  <text class="ts" x="30" y="310">columns 2–5: one servo plug each, brown down</text>
+  <text class="ts" x="30" y="326">column 6 (toward the DAOKAI): power wires in</text>
+  <text class="ts" x="30" y="342">columns 1 and 6: held by the slotted posts</text>
+
+  <!-- BACK (mirrored) -->
+  <text class="th" x="510" y="40" text-anchor="middle">Back (solder side, mirrored)</text>
+  <rect x="370" y="100" width="280" height="120" rx="4" fill="#3b6d11"/>
+  <g fill="#9fbf86">
+    <circle cx="610" cy="120" r="5"/><circle cx="610" cy="160" r="5"/><circle cx="610" cy="200" r="5"/>
+    <circle cx="410" cy="120" r="5"/>
+  </g>
+  <g fill="#d9d9d9" stroke="#888" stroke-width="1">
+    <circle cx="450" cy="120" r="6"/><circle cx="490" cy="120" r="6"/><circle cx="530" cy="120" r="6"/><circle cx="570" cy="120" r="6"/>
+    <circle cx="450" cy="160" r="6"/><circle cx="490" cy="160" r="6"/><circle cx="530" cy="160" r="6"/><circle cx="570" cy="160" r="6"/>
+    <circle cx="450" cy="200" r="6"/><circle cx="490" cy="200" r="6"/><circle cx="530" cy="200" r="6"/><circle cx="570" cy="200" r="6"/>
+    <circle cx="410" cy="160" r="6"/><circle cx="410" cy="200" r="6"/>
+  </g>
+  <g class="ts" text-anchor="middle">
+    <text x="610" y="236">1</text><text x="570" y="236">2</text><text x="530" y="236">3</text><text x="490" y="236">4</text><text x="450" y="236">5</text><text x="410" y="236">6</text>
+  </g>
+  <!-- bare-wire bridges -->
+  <line x1="410" y1="160" x2="570" y2="160" stroke="#e24b4a" stroke-width="4"/>
+  <line x1="410" y1="200" x2="570" y2="200" stroke="#888780" stroke-width="4"/>
+  <!-- signal wires out over the top edge -->
+  <g fill="none" stroke="#ef9f27" stroke-width="2">
+    <polyline points="570,120 570,64"/><polyline points="530,120 530,64"/><polyline points="490,120 490,64"/><polyline points="450,120 450,64"/>
+  </g>
+  <g class="t" text-anchor="middle">
+    <text x="570" y="58">4</text><text x="530" y="58">5</text><text x="490" y="58">6</text><text x="450" y="58">7</text>
+  </g>
+  <text class="ts" x="620" y="58">to GPIO</text>
+  <!-- power wires at column 6, out over the bottom edge -->
+  <g fill="none" stroke-width="2">
+    <polyline points="410,160 404,160 404,372 440,372" stroke="#e24b4a"/>
+    <polyline points="410,160 416,160 416,392 440,392" stroke="#e24b4a"/>
+    <polyline points="410,200 400,200 400,412 440,412" stroke="#888780"/>
+    <polyline points="410,200 420,200 420,432 440,432" stroke="#888780"/>
+  </g>
+  <g class="t">
+    <text x="448" y="376">+5 V from the switch</text>
+    <text x="448" y="396">to the ESP32's 5V</text>
+    <text x="448" y="416">GND from the DAOKAI</text>
+    <text x="448" y="436">to the ESP32's G</text>
+  </g>
+  <text class="ts" x="440" y="250">rows 1 and 2: bridge the 4 pins</text>
+  <text class="ts" x="440" y="266">and column 6 with bare wire</text>
+  <text class="ts" x="440" y="290">row 3: 4 pins apart, not bridged</text>
+  <text class="ts" x="440" y="314">wires leave over the edges:</text>
+  <text class="ts" x="440" y="330">the back faces the wall, 1.5 mm</text>
+  <text class="ts" x="30" y="468">Animo v2 brain · split board on a 2 × 8 cm perfboard scrap, 6 × 3 holes (20 × 7.6 mm) · see brain-wiring.svg</text>
+</svg>
