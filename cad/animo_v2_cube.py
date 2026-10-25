@@ -306,6 +306,9 @@ sb_cols    = 6      # the perfboard scrap, counted in holes and cut between them
 sb_rows    = 3      #      4 servo columns and a spare one at each end (the posts
                     #      hold those; the 5 V and GND wires come in at the +Y one)
                     #      by 3 rows (GND, +5 V, signal), cut between rows
+sb_spare   = 2      # spare hole columns on the board's +Y side (toward the DAOKAI):
+                    #      the header went in at one end of the 6 (2026-10-25),
+                    #      so the two free columns go toward the power wires
 sb_len     = 20.0   # mm — the board's length: a 2 x 8 cm perfboard is 20 wide with
                     #      6 holes across, a margin at each side (2026-10-25); cut
                     #      only across it, 3 rows, it stays 20
@@ -829,9 +832,11 @@ def make_split_board():
 
 
 def _sb_y_ends():
-    """The board's ends in Y: the plug block in the middle of its 6 hole
-    columns, the columns in the middle of its length."""
-    return sb_y_c - sb_len / 2, sb_y_c + sb_len / 2
+    """The board's ends in Y: its 6 hole columns in the middle of its length,
+    the plug block (centred on sb_y_c, over the cable passage) on 4 of them,
+    sb_spare free columns on its +Y side."""
+    yc = sb_y_c + (sb_spare - (sb_cols - plug_n - sb_spare)) / 2.0 * sb_pitch
+    return yc - sb_len / 2, yc + sb_len / 2
 
 
 def make_sb_posts():
