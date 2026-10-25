@@ -305,7 +305,10 @@ sb_z0      = 0.0    # mm — plugs' underside above the brain's floor: they sit 
 sb_cols    = 6      # the perfboard scrap, counted in holes and cut between them:
 sb_rows    = 3      #      4 servo columns and a spare one at each end (the posts
                     #      hold those; the 5 V and GND wires come in at the +Y one)
-                    #      by 3 rows (GND, +5 V, signal): 15.24 x 7.62
+                    #      by 3 rows (GND, +5 V, signal), cut between rows
+sb_len     = 20.0   # mm — the board's length: a 2 x 8 cm perfboard is 20 wide with
+                    #      6 holes across, a margin at each side (2026-10-25); cut
+                    #      only across it, 3 rows, it stays 20
 sb_post_h  = 5.0    # mm — the two slotted posts that hold the board upright
 sb_slot    = 0.3    # mm — slot clearance round the perfboard
 cradle_w   = 1.2    # mm — cradle wall
@@ -826,11 +829,9 @@ def make_split_board():
 
 
 def _sb_y_ends():
-    """The board's ends in Y: the plug block in the middle, a spare column
-    at each end."""
-    w = plug_n * sb_pitch
-    spare = (sb_cols - plug_n) / 2.0 * sb_pitch
-    return sb_y_c - w / 2 - spare, sb_y_c + w / 2 + spare
+    """The board's ends in Y: the plug block in the middle of its 6 hole
+    columns, the columns in the middle of its length."""
+    return sb_y_c - sb_len / 2, sb_y_c + sb_len / 2
 
 
 def make_sb_posts():
