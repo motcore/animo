@@ -1,9 +1,13 @@
-# Split board test: sweeps the four servo channels (GPIO 4, 5, 6, 7) through
-# 1000 / 1500 / 2000 us, one after another, so each plug can be checked in
-# turn: plug a servo into each and watch that only that one moves on its turn.
-# The Wi-Fi radio stays on to keep the DAOKAI awake. The on-board LED (GPIO8,
-# active low) blinks once per channel number: 1 blink = GPIO4 ... 4 = GPIO7.
-# Copy it as main.py to run it from the battery:
+# Split board test: moves the four servo channels (GPIO 4, 5, 6, 7) one at a
+# time through 1000 / 2000 / 1500 us, so each plug can be checked in turn:
+# plug a servo into each and watch that only that one moves on its turn.
+# No pulses at start-up and each servo is let go after its turn: four servos
+# jumping to centre at once drew more than the DAOKAI gives and the ESP32
+# kept resetting (2026-10-26). The Wi-Fi radio stays on to keep the DAOKAI
+# awake. The on-board LED (GPIO8, active low) blinks the channel number
+# first: 1 blink = GPIO4 ... 4 = GPIO7.
+# Copy it as main.py to run it from the battery (servos UNPLUGGED while on
+# USB: the USB's 5 V reaches the split board through the ESP32's 5V pin):
 #   mpremote connect COM4 cp four_servos_test.py :main.py
 
 import network
@@ -12,12 +16,15 @@ from machine import Pin, PWM
 
 PINS = (4, 5, 6, 7)
 
+led = Pin(8, Pin.OUT, value=1)
+time.sleep(1)                           # let the supply settle
+
 ap = network.WLAN(network.AP_IF)        # keeps the DAOKAI awake
 ap.active(True)
 ap.config(essid="animo-test")
 
-led = Pin(8, Pin.OUT, value=1)
-servos = [PWM(Pin(p), freq=50, duty_ns=1500 * 1000) for p in PINS]
+for p in PINS:                          # no pulses yet: plain low outputs
+    Pin(p, Pin.OUT, value=0)
 
 
 def blink(n):
@@ -29,9 +36,12 @@ def blink(n):
 
 
 while True:
-    for i, servo in enumerate(servos):
+    for i, p in enumerate(PINS):
         blink(i + 1)
-        for us in (1000, 2000, 1500):
+        servo = PWM(Pin(p), freq=50)    # set the pulse after: a duty given
+        for us in (1000, 2000, 1500):   # here leaves it "inactive" (v1.29)
             servo.duty_ns(us * 1000)
             time.sleep(0.8)
+        servo.deinit()                  # let it go: it stops drawing current
+        Pin(p, Pin.OUT, value=0)        # (a PWM can't idle at duty 0 here)
         time.sleep(0.6)
