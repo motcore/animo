@@ -31,6 +31,10 @@ MESH = os.path.join(HERE, "meshes")
 P = dict(
     cube_g=125.0,      # g — the cube without the brain (guess: 185 in all)
     brain_g=60.0,      # g — battery, boards, box and lid, up top (guess)
+    sag=150.0,         # mm — the sole's fore-aft arc, its centre above the hip
+                       #    (cad ANIMO_SAG_UP): 20 the drawn one, 60, 150;
+                       #    0 = flat fore and aft (a cylinder, curved only
+                       #    side to side). 20 is nearly a ball: it pivots
     leg_g=10.0,        # g — each leg, printed (15 cm3 solid, ~half full)
     tail_g=2.0,        # g — the tail, printed
     weight_g=6.0,      # g — M5x16 + 2 nuts at the tail's tip
@@ -58,7 +62,7 @@ P = dict(
     stop_n=2.0,
     rest_s=1.0,        # s — still, between rounds
     head_deg=40.0,     # how far the head pokes forward
-    head_phase=0.0,    # deg — where in the step the poke falls
+    head_phase=135.0,  # deg — where in the step the poke falls
     tail_keep=0.5,     # the tail during STEPS, as a share of tail_deg
     mirror=1.0,        # 1: every other round is the mirror image (the tail
                        #    starts to the other side): each round's start
@@ -66,7 +70,7 @@ P = dict(
     freq=1.0,          # Hz
     tail_deg=15.0,     # each way
     leg_deg=6.0,       # each way
-    phase=135.0,       # deg, legs behind the tail (robust.py)
+    phase=315.0,       # deg, legs behind the tail (robust.py, sag 150)
     lean=-5.0,         # deg, both legs together (+ = feet forward): levels
                        #    the body with the 12 g head
     tail_only_s=6.0,
@@ -119,6 +123,7 @@ def build(p):
       </body>""" if p["head"] else ""
     act_head = (f'<position name="head" joint="head" kp="3" forcerange="-{p["servo_torque"]} '
                 f'{p["servo_torque"]}"/>' if p["head"] else "")
+    tag = "_flat" if p["sag"] == 0 else f"_sag{p['sag']:.0f}"
     if p["head"] == 2:
         a = math.radians(p["head_down"])
         hy, hz = p["head_len"] / 1000 * math.cos(a), -p["head_len"] / 1000 * math.sin(a)
@@ -133,8 +138,8 @@ def build(p):
 <mujoco model="animo_trex">
   <option timestep="0.0005" gravity="0 0 -9.81"/>
   <asset>
-    <mesh name="legR" file="{binary_stl('LegRight')}"/>
-    <mesh name="legL" file="{binary_stl('LegLeft')}"/>
+    <mesh name="legR" file="{binary_stl('LegRight' + tag)}"/>
+    <mesh name="legL" file="{binary_stl('LegLeft' + tag)}"/>
     <mesh name="tail" file="{binary_stl('Tail')}"/>
     <mesh name="head" file="{binary_stl('Tail', mirror_y=True)}"/>
     <texture name="grid" type="2d" builtin="checker" width="256" height="256"

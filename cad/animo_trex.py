@@ -34,6 +34,7 @@
 #
 # Coordinates: as the cube's. Origin = cube centre, +Z up, +Y = forward.
 
+import math
 import os
 import Part
 import FreeCAD as App
@@ -68,7 +69,13 @@ x_in       = 0.5     # mm — the feet's inner edges: a 1 mm gap. With 6 the cub
                      #      sat on two edges and the tail could not rock it
                      #      (MuJoCo, 2026-10-28): the rocker must be whole
 SAG_UP     = 20.0    # mm — the fore-aft arc's centre above the hip; the
-                     #      centre of mass is ~5 above the hip (brain)
+                     #      centre of mass is ~5 above the hip (brain).
+                     #      ANIMO_SAG_UP=<mm> or =flat tries others (the sim):
+                     #      flat = a cylinder, curved only side to side
+_sag = os.environ.get("ANIMO_SAG_UP")
+if _sag:
+    SAG_UP = None if _sag == "flat" else float(_sag)
+FOOT_HALF  = 24.0    # mm — a flat sole's half length (the arc's, at SAG_UP 20)
 HIP_H      = 52.0    # mm — hip to the sole at the inner edge: the cube's
                      #      bottom stands HIP_H - 28 off the ground. 48 left
                      #      no room under the cube for the longer fore-aft arc
@@ -177,10 +184,17 @@ def leg_body(s):
            Vector(s * x_cube, 0, -r_top_in), Vector(s * x_in, 0, -r_top_in), p_in]
     edges += [Part.makeLine(a, b) for a, b in zip(pts, pts[1:])]
     sec = Part.Face(Part.Wire(Part.__sortEdges__(edges)))
-    c = Vector(0, 0, SAG_UP)
-    sec = sec.copy()
-    sec.rotate(c, X_AXIS, -foot_arc)
-    foot = sec.revolve(c, X_AXIS, 2 * foot_arc)
+    if SAG_UP is None:                  # flat fore and aft
+        foot = sec.copy()
+        foot.translate(Vector(0, -FOOT_HALF, 0))
+        foot = foot.extrude(Vector(0, 2 * FOOT_HALF, 0))
+    else:
+        c = Vector(0, 0, SAG_UP)
+        sec = sec.copy()
+        arc = foot_arc if SAG_UP == 20.0 else math.degrees(   # the same length
+            math.asin(min(1.0, FOOT_HALF / (HIP_H + SAG_UP))))  # for trial soles
+        sec.rotate(c, X_AXIS, -arc)
+        foot = sec.revolve(c, X_AXIS, 2 * arc)
     return plate.fuse(Part.Solid(foot) if foot.ShapeType == "Shell" else foot).removeSplitter()
 
 
@@ -294,7 +308,8 @@ print(f"\n  Hip {hip:.1f} above the ground; the cube's bottom {hip - half:.1f} o
 print(f"  Rocker: R {R_FRONT:.0f}, centre {z_c + hip:.1f} above the ground"
       f" (the centre of mass must stay below it).")
 print(f"  Sole: {r_sole(x_in):.1f} from the hip at the inner edge, {r_sole(x_leg1):.1f} at the outer;"
-      f" fore-aft arc R {hip + SAG_UP:.0f}, centre {hip + SAG_UP:.0f} above the ground.")
+      + (" flat fore and aft." if SAG_UP is None else
+       f" fore-aft arc R {hip + SAG_UP:.0f}, centre {hip + SAG_UP:.0f} above the ground."))
 for n, sh in (("leg", make_leg(1)), ("tail", make_tail())):
     print(f"  {n}: {sh.Volume / 1000:.1f} cm3, ~{sh.Volume / 1000 * 1.27:.1f} g solid PETG")
 
@@ -325,13 +340,14 @@ EXPORT = [("animo_trex_LegRight", on_bed(make_leg(1), Y_AXIS, 90)),     # outer 
           ("animo_trex_LegLeft", on_bed(make_leg(-1), Y_AXIS, -90)),
           ("animo_trex_Tail", on_bed(make_tail(), Y_AXIS, 90)),         # on its side
           ("animo_trex_SpigotCoupon", on_bed(make_coupon()))]
-for name, sh in EXPORT:
+for name, sh in ([] if _sag else EXPORT):    # a trial sole: for the sim only
     sh.exportStl(os.path.join(out, name + ".stl"))
 print(f"\n  STL -> {out}  ({fails} FAIL)")
 
 # Assembled copies, for a picture (ANIMO_VIEW=<folder>)
 view = os.environ.get("ANIMO_VIEW")
 if view:
-    for name, sh in (("LegRight", make_leg(1)), ("LegLeft", make_leg(-1)),
+    tag = "" if not _sag else "_" + ("flat" if SAG_UP is None else f"sag{SAG_UP:.0f}")
+    for name, sh in (("LegRight" + tag, make_leg(1)), ("LegLeft" + tag, make_leg(-1)),
                      ("Tail", make_tail()), ("Cube", CUBE)):
         sh.exportStl(os.path.join(view, name + ".stl"))
