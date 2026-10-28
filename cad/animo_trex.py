@@ -23,9 +23,14 @@
 #     Stable both ways while the centre of mass is below both arcs' centres.
 #     The feet reach in under the cube so the rocker has no wide gap.
 #   - TAIL on the back wall (-Y): that output turns about Y, so a tail
-#     pointing back would only spin on itself. It is a crossbar with M5
-#     screws as weights: swung fast, its reaction rolls the body the other
-#     way. Weights tune it without reprinting.
+#     pointing straight back would only spin on itself. It goes back and
+#     DOWN, with an M5 screw and nuts at the tip as the weight: the output's
+#     turn wags the tip from side to side, and swung fast, its reaction rolls
+#     the body the other way (gravity helps it back: it hangs). A crossbar
+#     (2026-10-28, first draw) pushes about twice as hard but doesn't look
+#     like a tail (user). Nuts on the screw tune it without reprinting.
+#     Its weight sits behind the cube: the firmware's LEAN turns both legs
+#     together to keep the body level.
 #
 # Coordinates: as the cube's. Origin = cube centre, +Z up, +Y = forward.
 
@@ -76,14 +81,17 @@ clear      = 0.4     # mm — the least gap the checks accept
 
 # ── Tail ────────────────────────────────────────────────────────────────────
 TAIL_SWING = 35.0    # deg — each way
-tail_y0    = 34.0    # mm — the bar's front face behind the cube's centre:
-                     #      the feet reach ~31 back at full swing
-tail_t     = 6.0     # mm — bar thickness (along Y)
-tail_h     = 10.0    # mm — bar height
-tail_span  = 45.0    # mm — half its length
-neck_r     = 5.0     # mm — the neck from the spacer to the bar
-TAIL_HOLES = [20.0, 30.0, 40.0]   # mm — M5 holes each side: screws + nuts
-m5_clear   = 5.4     # mm
+TAIL_TIP   = (-52.0, -30.0)   # mm — (y, z) of the tip: 24 behind the wall,
+                     #      30 below the axis (22 off the ground hanging)
+TAIL_BEND  = (-52.0, 0.0)     # mm — the curve's control point: straight back,
+                     #      then down
+tail_r     = (4.5, 3.0)       # mm — half its height, at the wall and at the tip
+tail_t     = spigot  # mm — thickness (along X): it prints on its side, and
+                     #      the spigot's tips must reach the bed
+tip_r      = 6.0     # mm — the tip's disc, round the screw
+m5_clear   = 5.4     # mm — M5 across the tail (along X): screw + nuts
+WEIGHT     = (4.6, 9.0)       # mm — the ghost weight: nut's radius, and how far
+                              #      it stands out each side (M5x16, 2 nuts)
 
 # ═══════════════════════════════════════════════════════════════════
 # HELPERS
@@ -178,23 +186,50 @@ def make_leg(s):
     return leg_body(s).fuse(spigot_x(s)).removeSplitter()
 
 
-def tail_body():
-    y0, y1 = -tail_y0, -(tail_y0 + tail_t)
-    bar = box(-tail_span + tail_h / 2, tail_span - tail_h / 2, y1, y0,
-              -tail_h / 2, tail_h / 2)
-    for sx in (1, -1):
-        bar = bar.fuse(cyl_y(tail_h / 2, y1, y0, x=sx * (tail_span - tail_h / 2)))
-    neck = cyl_y(neck_r, -x_leg0, y0)
-    t = bar.fuse(neck).removeSplitter()
-    for x in TAIL_HOLES:
-        for sx in (1, -1):
-            t = t.cut(cyl_y(m5_clear / 2, y1 - 1, y0 + 1, x=sx * x))
+def _tail_outline():
+    """The tail's side view (y, z): a quadratic curve from the wall back and
+    down to the tip, its height tapering; returns the closed outline."""
+    p0 = (-x_leg0, 0.0)
+    p1, p2 = TAIL_BEND, TAIL_TIP
+    up, lo = [], []
+    n = 24
+    for i in range(n + 1):
+        t = i / n
+        y = (1 - t) ** 2 * p0[0] + 2 * t * (1 - t) * p1[0] + t ** 2 * p2[0]
+        z = (1 - t) ** 2 * p0[1] + 2 * t * (1 - t) * p1[1] + t ** 2 * p2[1]
+        dy = 2 * (1 - t) * (p1[0] - p0[0]) + 2 * t * (p2[0] - p1[0])
+        dz = 2 * (1 - t) * (p1[1] - p0[1]) + 2 * t * (p2[1] - p1[1])
+        L = (dy * dy + dz * dz) ** 0.5
+        ny, nz = -dz / L, dy / L
+        r = tail_r[0] + (tail_r[1] - tail_r[0]) * t
+        up.append(Vector(0, y + r * ny, z + r * nz))
+        lo.append(Vector(0, y - r * ny, z - r * nz))
+    return up, lo
+
+
+def tail_body(weight=False):
+    up, lo = _tail_outline()
+    e1 = Part.BSplineCurve()
+    e1.interpolate(up)
+    e2 = Part.BSplineCurve()
+    e2.interpolate(lo[::-1])
+    edges = [e1.toShape(), Part.makeLine(up[-1], lo[-1]), e2.toShape(),
+             Part.makeLine(lo[0], up[0])]
+    face = Part.Face(Part.Wire(edges))
+    face.translate(Vector(-tail_t / 2, 0, 0))
+    t = face.extrude(Vector(tail_t, 0, 0))
+    ty, tz = TAIL_TIP
+    t = t.fuse(cyl_x(tip_r, -tail_t / 2, tail_t / 2, ty, tz)).removeSplitter()
+    t = t.cut(cyl_x(m5_clear / 2, -tail_t, tail_t, ty, tz))
+    if weight:      # screw head, nuts: the clearance checks see them
+        t = t.fuse(cyl_x(WEIGHT[0], -tail_t / 2 - WEIGHT[1], tail_t / 2 + WEIGHT[1], ty, tz))
     return t
 
 
 def make_tail():
     face = half - hub_recess
-    boss = cyl_y(boss_r, -face, -x_leg0)
+    boss = cyl_y(boss_r, -face, -x_leg0).common(
+        box(-tail_t / 2, tail_t / 2, -face - 1, -x_leg0 + 1, -boss_r, boss_r))
     return tail_body().fuse(boss).fuse(
         cross_y(spigot, -(face - spigot_len), -face)).removeSplitter()
 
@@ -232,7 +267,7 @@ def gap(a, b):
 
 checks = []
 LEG = {s: leg_body(s) for s in (1, -1)}
-TAIL = tail_body()
+TAIL = tail_body(weight=True)
 
 worst = min(gap(rot(LEG[1], X_AXIS, a), CUBE) for a in range(-int(SWING), int(SWING) + 1, 5))
 checks.append(("leg and foot clear the cube over the swing", worst, clear))
@@ -286,7 +321,7 @@ out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stl", "animo_tre
 os.makedirs(out, exist_ok=True)
 EXPORT = [("animo_trex_LegRight", on_bed(make_leg(1), Y_AXIS, 90)),     # outer face down
           ("animo_trex_LegLeft", on_bed(make_leg(-1), Y_AXIS, -90)),
-          ("animo_trex_Tail", on_bed(make_tail(), X_AXIS, 90)),         # back face down
+          ("animo_trex_Tail", on_bed(make_tail(), Y_AXIS, 90)),         # on its side
           ("animo_trex_SpigotCoupon", on_bed(make_coupon()))]
 for name, sh in EXPORT:
     sh.exportStl(os.path.join(out, name + ".stl"))

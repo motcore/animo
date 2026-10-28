@@ -35,6 +35,9 @@ FREQ = 1.8              # Hz: the rocking's own frequency, ~1.9 on paper
 TAIL_DEG = 30           # the tail's swing each way (max 35: the macro's)
 LEG_DEG = 15            # the legs' swing each way (max 20: the macro's)
 LEG_PHASE = 90          # deg: how far the legs lag the tail
+LEAN = 0                # deg: both legs turned together, to level the body
+                        # (the tail's weight sits behind it). Leans back:
+                        # try -5; if that's worse, +5
 TAIL_ONLY_S = 6         # s: rocking builds up before the legs join
 FADE_S = 4              # s: legs fade in over this
 SWEEP_FREQ = (1.4, 1.6, 1.8, 2.0, 2.2)
@@ -79,17 +82,19 @@ def walk(freq, leg_deg, phase, secs=None):
         w = 2 * math.pi * freq * t
         tail = TAIL_DEG * min(1.0, t / 2)   # 2 s ramp from rest
         legs = leg_deg * min(1.0, max(0.0, (t - TAIL_ONLY_S) / FADE_S))
+        lean = LEAN * min(1.0, t / 2)
         put("tail", tail * math.sin(w))
         step = legs * math.sin(w - math.radians(phase))
-        put("right", step)                  # one forward, the other back
-        put("left", -step)
+        put("right", lean + step)           # one forward, the other back
+        put("left", lean - step)
         led.value(0 if math.sin(w) > 0 else 1)   # LED on: tail to one side
         time.sleep_ms(20)
 
 
 def pause(n):
-    for name in servo:
-        put(name, 0)
+    put("tail", 0)
+    put("right", LEAN)
+    put("left", LEAN)
     time.sleep(0.5)
     for _ in range(n):
         led.value(0)
