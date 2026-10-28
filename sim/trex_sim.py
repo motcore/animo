@@ -4,6 +4,7 @@
 #
 #   python trex_sim.py                      one run, prints what happened
 #   python trex_sim.py --view               the same, in a window, real time
+#                                           (or .er.ps1 freq=0.9 ...)
 #   python trex_sim.py --set freq=1.6 phase=180 lean=-5
 #   python trex_sim.py --sweep freq         tail only: which rhythm rocks most
 #   python trex_sim.py --sweep phase        walking: which phase goes forward
@@ -38,9 +39,9 @@ P = dict(
                        #    tail fore and aft and pumps the rocking too
     head_g=-1.0,       # g — the head's tip weight; -1 = as the tail's
     freq=1.0,          # Hz
-    tail_deg=15.0,     # each way
-    leg_deg=15.0,      # each way
-    phase=180.0,       # deg, legs behind the tail
+    tail_deg=12.0,     # each way
+    leg_deg=10.0,      # each way
+    phase=225.0,       # deg, legs behind the tail (robust.py)
     lean=0.0,          # deg, both legs together
     tail_only_s=6.0,
     fade_s=4.0,
