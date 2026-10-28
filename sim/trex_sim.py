@@ -34,16 +34,20 @@ P = dict(
     leg_g=10.0,        # g — each leg, printed (15 cm3 solid, ~half full)
     tail_g=2.0,        # g — the tail, printed
     weight_g=6.0,      # g — M5x16 + 2 nuts at the tail's tip
-    head=2.0,          # 2: a head that NODS (fore-aft, about X) on the front
-                       #    wall: each nod forward is a step, like a pigeon
-                       #    (user, 2026-10-28). The pin-in-slot that turns the
+    head=2.0,          # 2: a head that POKES forward (a neck pivoting about X
+                       #    on the front wall, pointing up): its weight tips
+                       #    the whole body forward to fall onto the foot that
+                       #    steps — each poke a step (user, 2026-10-28). A
+                       #    small nod down barely moved the centre of mass. The pin-in-slot that turns the
                        #    front output's swing into a nod is not drawn yet:
                        #    here the nod is driven directly.
                        # 1: a second tail on the front wall, swinging with it
                        # 0: none
-    head_g=-1.0,       # g — the head's tip weight; -1 = as the tail's
-    head_len=40.0,     # mm — nod pivot to the head's weight
-    head_down=15.0,    # deg — the neck's slope at rest
+    head_g=12.0,       # g — the head's weight. Its fore-aft pull is touchy:
+                       #    6 g tips the body 4 deg poking, 12 g 6 deg, 18 g
+                       #    falls on its face standing still
+    head_len=40.0,     # mm — pivot to the head's weight
+    head_down=-70.0,   # deg — the neck's slope at rest (minus = up)
     gait=1.0,          # 1: three phases, repeated (user, 2026-10-28):
                        #    START the tail starts the rocking; STEPS the head
                        #    nods once per step, the legs step; STOP all to
@@ -53,8 +57,8 @@ P = dict(
     steps_n=4.0,
     stop_n=2.0,
     rest_s=1.0,        # s — still, between rounds
-    head_deg=15.0,     # the nod's depth (down from rest)
-    head_phase=180.0,  # deg — where in the step the nod falls
+    head_deg=40.0,     # how far the head pokes forward
+    head_phase=0.0,    # deg — where in the step the poke falls
     tail_keep=0.5,     # the tail during STEPS, as a share of tail_deg
     mirror=1.0,        # 1: every other round is the mirror image (the tail
                        #    starts to the other side): each round's start
@@ -62,8 +66,9 @@ P = dict(
     freq=1.0,          # Hz
     tail_deg=15.0,     # each way
     leg_deg=6.0,       # each way
-    phase=225.0,       # deg, legs behind the tail (robust.py: in both gaits)
-    lean=0.0,          # deg, both legs together
+    phase=135.0,       # deg, legs behind the tail (robust.py)
+    lean=-5.0,         # deg, both legs together (+ = feet forward): levels
+                       #    the body with the 12 g head
     tail_only_s=6.0,
     fade_s=4.0,
     secs=20.0,
@@ -211,9 +216,10 @@ def phases(p, t):
         tail = -p["tail_deg"] * (1 - u / n3) * math.sin(w)   # against it
     else:
         name = "rest"
+    lean = p["lean"] * min(1.0, t / 2)
     if flip:                    # mirror image: the legs swap, the tail flips
-        return (-step, step, -tail, head), name
-    return (step, -step, tail, head), name
+        return (lean - step, lean + step, -tail, head), name
+    return (lean + step, lean - step, tail, head), name
 
 
 def targets(p, t):

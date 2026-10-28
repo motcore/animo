@@ -20,7 +20,8 @@ SCENARIOS = {
     "slippery":     {"friction": 0.5},
     "grippy":       {"friction": 1.1},
     "heavy brain":  {"brain_g": 75.0, "cube_g": 110.0},
-    "light head":   {"head_g": 4.5},
+    "light head":   {"head_g": 10.0},
+    "heavy head":   {"head_g": 14.0},
 }
 
 GRID = dict(
@@ -49,10 +50,11 @@ def score(results):
     return worst - 2.0 * turn
 
 
-def evaluate(gaits, pool):
-    jobs = [(g, s) for g in gaits for s in SCENARIOS.values()]
+def evaluate(gaits, pool, scen=None):
+    scen = scen or SCENARIOS
+    jobs = [(g, s) for g in gaits for s in scen.values()]
     out = pool.map(run_one, jobs)
-    n = len(SCENARIOS)
+    n = len(scen)
     return [(score(out[i * n:(i + 1) * n]), g, out[i * n:(i + 1) * n])
             for i, g in enumerate(gaits)]
 
@@ -68,6 +70,8 @@ def main():
     ap.add_argument("--check", nargs="*", metavar="KEY=VALUE")
     ap.add_argument("--grid", nargs="*", default=[], metavar="KEY=v1,v2")
     ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE")
+    ap.add_argument("--quick", type=int, default=0,
+                    help="screen on the nominal case only, then check this many")
     a = ap.parse_args()
     base = {k: float(v) for k, v in (kv.split("=") for kv in a.set)}
     with mp.Pool() as pool:
@@ -88,6 +92,14 @@ def main():
         gaits = [dict(base, **dict(zip(keys, vals)))
                  for vals in itertools.product(*grid.values())]
         print(f"{len(gaits)} gaits x {len(SCENARIOS)} scenarios: {list(SCENARIOS)}")
+        if a.quick:
+            nom = {"nominal": {}}
+            first = sorted(evaluate(gaits, pool, nom), key=lambda t: -t[0])
+            print("nominal only, best:")
+            for sc, g, res in first[:a.quick]:
+                print(line(sc, {k: g[k] for k in keys}, res))
+            gaits = [g for _, g, _ in first[:a.quick]]
+            print("every scenario:")
         ranked = sorted(evaluate(gaits, pool), key=lambda t: -t[0])
         for sc, g, res in ranked[:12]:
             print(line(sc, {k: g[k] for k in keys}, res))
