@@ -12,7 +12,7 @@ import multiprocessing as mp
 
 from trex_sim import P, Run
 
-SECS = 25.0
+SECS = 40.0             # four rounds of the three-phase gait
 SCENARIOS = {
     "nominal":      {},
     "rhythm -5%":   {"freq_k": 0.95},
@@ -80,7 +80,7 @@ def main():
                       f"  turn {r['turn_deg']:+5.0f}  rock +-{r['roll_amp']:4.1f}"
                       f"{'  FELL' if r['fell'] else ''}")
             return
-        grid = dict(GRID)
+        grid = {} if a.grid else dict(GRID)     # --grid replaces the default
         for kv in a.grid:
             k, v = kv.split("=")
             grid[k] = [float(x) for x in v.split(",")]

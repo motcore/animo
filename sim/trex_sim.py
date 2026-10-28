@@ -34,14 +34,35 @@ P = dict(
     leg_g=10.0,        # g — each leg, printed (15 cm3 solid, ~half full)
     tail_g=2.0,        # g — the tail, printed
     weight_g=6.0,      # g — M5x16 + 2 nuts at the tail's tip
-    head=1.0,          # 1: a "head" on the front wall, the tail's mirror,
-                       #    swinging with it (same weight): it balances the
-                       #    tail fore and aft and pumps the rocking too
+    head=2.0,          # 2: a head that NODS (fore-aft, about X) on the front
+                       #    wall: each nod forward is a step, like a pigeon
+                       #    (user, 2026-10-28). The pin-in-slot that turns the
+                       #    front output's swing into a nod is not drawn yet:
+                       #    here the nod is driven directly.
+                       # 1: a second tail on the front wall, swinging with it
+                       # 0: none
     head_g=-1.0,       # g — the head's tip weight; -1 = as the tail's
+    head_len=40.0,     # mm — nod pivot to the head's weight
+    head_down=15.0,    # deg — the neck's slope at rest
+    gait=1.0,          # 1: three phases, repeated (user, 2026-10-28):
+                       #    START the tail starts the rocking; STEPS the head
+                       #    nods once per step, the legs step; STOP all to
+                       #    rest, the tail against the rocking to calm it
+                       # 0: continuous (tail, legs, the head as a tail)
+    start_n=3.0,       # rocking cycles of each phase
+    steps_n=4.0,
+    stop_n=2.0,
+    rest_s=1.0,        # s — still, between rounds
+    head_deg=15.0,     # the nod's depth (down from rest)
+    head_phase=180.0,  # deg — where in the step the nod falls
+    tail_keep=0.5,     # the tail during STEPS, as a share of tail_deg
+    mirror=1.0,        # 1: every other round is the mirror image (the tail
+                       #    starts to the other side): each round's start
+                       #    turns it one way, the next one back
     freq=1.0,          # Hz
-    tail_deg=12.0,     # each way
-    leg_deg=10.0,      # each way
-    phase=225.0,       # deg, legs behind the tail (robust.py)
+    tail_deg=15.0,     # each way
+    leg_deg=6.0,       # each way
+    phase=225.0,       # deg, legs behind the tail (robust.py: in both gaits)
     lean=0.0,          # deg, both legs together
     tail_only_s=6.0,
     fade_s=4.0,
@@ -93,6 +114,16 @@ def build(p):
       </body>""" if p["head"] else ""
     act_head = (f'<position name="head" joint="head" kp="3" forcerange="-{p["servo_torque"]} '
                 f'{p["servo_torque"]}"/>' if p["head"] else "")
+    if p["head"] == 2:
+        a = math.radians(p["head_down"])
+        hy, hz = p["head_len"] / 1000 * math.cos(a), -p["head_len"] / 1000 * math.sin(a)
+        head = f"""<body name="head" pos="0 .031 0">
+        <joint name="head" type="hinge" axis="1 0 0"/>
+        <geom type="capsule" fromto="0 0 0 0 {hy} {hz}" size=".004"
+              mass="{kg(p['tail_g'] + 1.0)}" rgba=".3 .6 .8 1"/>
+        <geom type="sphere" size=".006" pos="0 {hy} {hz}"
+              mass="{kg(max(hg, 0.0001))}" rgba=".4 .4 .45 1"/>
+      </body>"""
     xml = f"""
 <mujoco model="animo_trex">
   <option timestep="0.0005" gravity="0 0 -9.81"/>
@@ -150,6 +181,41 @@ def build(p):
     return m, mujoco.MjData(m)
 
 
+def phases(p, t):
+    """The three-phase gait, repeated: (legR, legL, tail, head) in degrees,
+    and the phase's name. The phases last whole rocking cycles, so the
+    rhythm runs on unbroken from one to the next."""
+    T = 1.0 / p["freq"]
+    n1, n2, n3 = p["start_n"] * T, p["steps_n"] * T, p["stop_n"] * T
+    period = n1 + n2 + n3 + p["rest_s"]
+    k = t % period
+    flip = p["mirror"] and int(t // period) % 2 == 1
+    w = 2 * math.pi * p["freq"] * t
+    tail, step, head = 0.0, 0.0, 0.0
+    if k < n1:                                          # START
+        name = "start"
+        tail = p["tail_deg"] * min(1.0, k / T) * math.sin(w)
+    elif k < n1 + n2:                                   # STEPS
+        name = "steps"
+        u = k - n1
+        fade = min(1.0, u / (0.5 * T))
+        tail = p["tail_deg"] * p["tail_keep"] * math.sin(w)
+        step = fade * p["leg_deg"] * math.sin(w - math.radians(p["phase"]))
+        nod = (1 - math.cos(2 * w - math.radians(p["head_phase"]))) / 2
+        head = -fade * p["head_deg"] * nod              # two nods a cycle
+    elif k < n1 + n2 + n3:                              # STOP
+        name = "stop"
+        u = k - n1 - n2
+        fade = max(0.0, 1 - u / (0.5 * T))
+        step = fade * p["leg_deg"] * math.sin(w - math.radians(p["phase"]))
+        tail = -p["tail_deg"] * (1 - u / n3) * math.sin(w)   # against it
+    else:
+        name = "rest"
+    if flip:                    # mirror image: the legs swap, the tail flips
+        return (-step, step, -tail, head), name
+    return (step, -step, tail, head), name
+
+
 def targets(p, t):
     """The firmware's gait: (legR, legL, tail) in radians at time t."""
     w = 2 * math.pi * p["freq"] * t
@@ -168,12 +234,17 @@ class Run:
         self.cmd = np.zeros(self.m.nu)
         self.start = None
         self.roll, self.pitch, self.fell = [], [], False
+        self.phase = ""
 
     def step(self):
         p, m, d = self.p, self.m, self.d
-        want = np.array(targets(p, d.time))
-        if m.nu == 4:
-            want = np.append(want, want[2])     # the head swings with the tail
+        if p["gait"] == 1:
+            deg, self.phase = phases(p, d.time)
+            want = np.radians(deg[:m.nu])
+        else:
+            want = np.array(targets(p, d.time))
+            if m.nu == 4:
+                want = np.append(want, want[2])     # the head swings with the tail
         dmax = p["servo_speed"] * m.opt.timestep        # the servo's top speed
         self.cmd += np.clip(want - self.cmd, -dmax, dmax)
         d.ctrl[:] = self.cmd
@@ -218,8 +289,11 @@ def show(p):
         v.cam.distance, v.cam.elevation, v.cam.azimuth = 0.45, -15, 135
         while v.is_running() and r.d.time < p["secs"]:
             t0 = time.perf_counter()
+            last = r.phase
             for _ in range(int(0.02 / r.m.opt.timestep)):
                 r.step()
+            if r.phase != last:
+                print(f"{r.d.time:5.1f} s  {r.phase.upper()}", flush=True)
             v.cam.lookat[:] = r.d.qpos[:3]
             v.sync()
             time.sleep(max(0.0, 0.02 - (time.perf_counter() - t0)))
