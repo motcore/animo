@@ -328,9 +328,11 @@ tape_t     = 3.0    # mm — foam pad between battery and lid (50 x 30 x 3, Amaz
 if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20):
                          # press +0.05, sliding +0.25; holes print ~0.27 small
     hub_clear = 0.125        # hub's hole: sliding, +0.25 on the diameter
-    hole_grow = 0.07         # LEGO axle's cross: 4.87 / 1.87. The coupon's 4.97
-                             #      was too loose in the hub (6.5 deep); of two hubs
-                             #      printed, 4.92 and 4.87, the 4.87 won (2026-10-21)
+    hole_grow = 0.10         # LEGO axle's cross: 4.90 / 1.90. The coupon's 4.97
+                             #      was too loose in the hub (6.5 deep); of two hubs,
+                             #      4.92 and 4.87, the 4.87 won (2026-10-21), but
+                             #      three more at 4.87 came out too tight
+                             #      (2026-10-28): prints scatter, take the middle
     pin_grow = 0.15          # LEGO pin holes: on the Technic coupon (2026-10-20)
                              #      4.95 felt most like a real beam (5.00 close)
     horn_hub_grow += 0.05    # horn hub's press fit — an estimate, to confirm
