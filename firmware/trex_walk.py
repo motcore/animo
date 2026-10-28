@@ -26,22 +26,30 @@ from machine import Pin, PWM
 
 MODE = "park"
 
-PINS = {"right": 4, "left": 5, "tail": 6}   # GPIO of each wall's plug
-SIGN = {"right": 1, "left": -1, "tail": 1}  # +1 / -1: legs forward, tail right
-TRIM = {"right": 0, "left": 0, "tail": 0}   # us: straight down / level at 0
+# The "head" is a second tail on the front wall (the same printed part): it
+# balances the tail fore and aft and swings with it. Without it the cube
+# leans back onto its tail (MuJoCo, sim/trex_sim.py, 2026-10-28).
+PINS = {"right": 4, "left": 5, "tail": 6, "head": 7}   # GPIO of each wall's plug
+SIGN = {"right": 1, "left": -1, "tail": 1, "head": -1}  # legs: + = foot forward;
+                                            # tail and head: both tips to the SAME side
+TRIM = {"right": 0, "left": 0, "tail": 0, "head": 0}   # us: straight down at 0
 
 US_PER_DEG = 10.0       # MG90D: ~1000 us for ~90 deg (to check)
-FREQ = 1.8              # Hz: the rocking's own frequency, ~1.9 on paper
-TAIL_DEG = 30           # the tail's swing each way (max 35: the macro's)
+# Starting values from the simulator (sim/trex_sim.py, 2026-10-28): it rocks
+# most at ~1.0 Hz; tail and head at +-15 give +-15..20 deg of rocking, more
+# and it falls over sideways. Walking is very sensitive: 1.0 Hz with the legs
+# 180 deg behind went forward, but 5 % off or 20 deg off turned or backed.
+FREQ = 1.0              # Hz: the rocking's own frequency
+TAIL_DEG = 15           # tail and head swing each way (max 35: the macro's)
 LEG_DEG = 15            # the legs' swing each way (max 20: the macro's)
-LEG_PHASE = 90          # deg: how far the legs lag the tail
-LEAN = 0                # deg: both legs turned together, to level the body
-                        # (the tail's weight sits behind it). Leans back:
-                        # try -5; if that's worse, +5
+LEG_PHASE = 180         # deg: how far the legs lag the tail
+LEAN = 0                # deg: both legs turned together, to level the body:
+                        # + = feet forward = the body leans FORWARD. With the
+                        # head on, 0; a tail alone (6 g) wanted ~+5
 TAIL_ONLY_S = 6         # s: rocking builds up before the legs join
 FADE_S = 4              # s: legs fade in over this
-SWEEP_FREQ = (1.4, 1.6, 1.8, 2.0, 2.2)
-SWEEP_PHASE = (0, 90, 180, 270)
+SWEEP_FREQ = (0.8, 0.9, 1.0, 1.1, 1.2)
+SWEEP_PHASE = (135, 160, 180, 200, 225)
 STEP_S = 15
 
 led = Pin(8, Pin.OUT, value=1)
@@ -52,7 +60,7 @@ ap.active(True)
 ap.config(essid="animo-trex")
 
 servo = {}
-for name in ("tail", "right", "left"):  # one at a time: all four jumping to
+for name in ("tail", "head", "right", "left"):  # one at a time: all four jumping to
     servo[name] = PWM(Pin(PINS[name]), freq=50)   # centre at once reset the
     servo[name].duty_ns((1500 + TRIM[name]) * 1000)  # ESP32 (2026-10-26)
     time.sleep(0.5)
@@ -84,6 +92,7 @@ def walk(freq, leg_deg, phase, secs=None):
         legs = leg_deg * min(1.0, max(0.0, (t - TAIL_ONLY_S) / FADE_S))
         lean = LEAN * min(1.0, t / 2)
         put("tail", tail * math.sin(w))
+        put("head", tail * math.sin(w))
         step = legs * math.sin(w - math.radians(phase))
         put("right", lean + step)           # one forward, the other back
         put("left", lean - step)
@@ -93,6 +102,7 @@ def walk(freq, leg_deg, phase, secs=None):
 
 def pause(n):
     put("tail", 0)
+    put("head", 0)
     put("right", LEAN)
     put("left", LEAN)
     time.sleep(0.5)

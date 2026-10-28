@@ -64,7 +64,9 @@ leg_t      = 6.0     # mm — the leg plate
 leg_w      = 12.0    # mm — its width (fore-aft)
 SWING      = 20.0    # deg — the leg's travel each way (the servo gives ~45)
 R_FRONT    = 75.0    # mm — the rocker's radius, frontal plane
-x_in       = 3.0     # mm — the feet's inner edges: a 6 mm gap between them
+x_in       = 0.5     # mm — the feet's inner edges: a 1 mm gap. With 6 the cube
+                     #      sat on two edges and the tail could not rock it
+                     #      (MuJoCo, 2026-10-28): the rocker must be whole
 SAG_UP     = 20.0    # mm — the fore-aft arc's centre above the hip; the
                      #      centre of mass is ~5 above the hip (brain)
 HIP_H      = 52.0    # mm — hip to the sole at the inner edge: the cube's
