@@ -75,6 +75,20 @@ SAG_UP     = 20.0    # mm — the fore-aft arc's centre above the hip; the
 _sag = os.environ.get("ANIMO_SAG_UP")
 if _sag:
     SAG_UP = None if _sag == "flat" else float(_sag)
+FRONT_TILT = None    # deg — None: the frontal rocker above. A number: each
+                     #      sole FLAT side to side, rising outward by this
+                     #      much, the two meeting in a ridge in the middle:
+                     #      the body rests on one sole or the other, still
+                     #      (user, 2026-10-29: the rocking was chaotic).
+                     #      ANIMO_FRONT=<deg> (the sim)
+                     #      With flat soles the inner edges must stand apart
+                     #      (x_in): resting on one, the other's edge lifts
+                     #      2 x_in sin(tilt); the centre of mass must sit past
+                     #      the edge, h sin(tilt) > x_in. ANIMO_XIN=<mm>
+_front = os.environ.get("ANIMO_FRONT")
+if _front:
+    FRONT_TILT = float(_front)
+    x_in = float(os.environ.get("ANIMO_XIN", x_in))
 FOOT_HALF  = 24.0    # mm — a flat sole's half length (the arc's, at SAG_UP 20)
 HIP_H      = 52.0    # mm — hip to the sole at the inner edge: the cube's
                      #      bottom stands HIP_H - 28 off the ground. 48 left
@@ -83,6 +97,11 @@ r_top_in   = 42.5    # mm — the foot's top under the cube (from the hip): it
                      #      must clear the cube's bottom over the whole swing;
                      #      the ends, lifted by the leg's turn, set it
 r_top_out  = 30.0    # mm — and outside the cube, where it meets the leg plate
+_hip = os.environ.get("ANIMO_HIP")       # longer legs (the sim): the plate
+if _hip:                                 # grows, the foot keeps its depth
+    r_top_in += float(_hip) - HIP_H
+    r_top_out += float(_hip) - HIP_H
+    HIP_H = float(_hip)
 foot_arc   = SWING   # deg — the sole each way (about its own centre): the
                      #      contact is where the sole's normal is vertical,
                      #      SWING behind or ahead of the foot's middle
@@ -177,9 +196,14 @@ def leg_body(s):
     # steps (low under the cube, high outside it).
     xo = x_leg1
     p_in = Vector(s * x_in, 0, -r_sole(x_in))
-    p_mid = Vector(s * (x_in + xo) / 2, 0, -r_sole((x_in + xo) / 2))
-    p_out = Vector(s * xo, 0, -r_sole(xo))
-    edges = [Part.Arc(p_in, p_mid, p_out).toShape()]
+    if FRONT_TILT is None:
+        p_mid = Vector(s * (x_in + xo) / 2, 0, -r_sole((x_in + xo) / 2))
+        p_out = Vector(s * xo, 0, -r_sole(xo))
+        edges = [Part.Arc(p_in, p_mid, p_out).toShape()]
+    else:                               # flat, rising outward
+        rise = (xo - x_in) * math.tan(math.radians(FRONT_TILT))
+        p_out = Vector(s * xo, 0, -r_sole(x_in) + rise)
+        edges = [Part.makeLine(p_in, p_out)]
     pts = [p_out, Vector(s * xo, 0, -r_top_out), Vector(s * x_cube, 0, -r_top_out),
            Vector(s * x_cube, 0, -r_top_in), Vector(s * x_in, 0, -r_top_in), p_in]
     edges += [Part.makeLine(a, b) for a, b in zip(pts, pts[1:])]
@@ -340,7 +364,7 @@ EXPORT = [("animo_trex_LegRight", on_bed(make_leg(1), Y_AXIS, 90)),     # outer 
           ("animo_trex_LegLeft", on_bed(make_leg(-1), Y_AXIS, -90)),
           ("animo_trex_Tail", on_bed(make_tail(), Y_AXIS, 90)),         # on its side
           ("animo_trex_SpigotCoupon", on_bed(make_coupon()))]
-for name, sh in ([] if _sag else EXPORT):    # a trial sole: for the sim only
+for name, sh in ([] if _sag or _front or _hip else EXPORT):    # a trial sole: for the sim only
     sh.exportStl(os.path.join(out, name + ".stl"))
 print(f"\n  STL -> {out}  ({fails} FAIL)")
 
@@ -348,6 +372,8 @@ print(f"\n  STL -> {out}  ({fails} FAIL)")
 view = os.environ.get("ANIMO_VIEW")
 if view:
     tag = "" if not _sag else "_" + ("flat" if SAG_UP is None else f"sag{SAG_UP:.0f}")
+    tag += f"_v{FRONT_TILT:g}g{x_in:g}" if _front else ""
+    tag += f"_h{HIP_H:g}" if _hip else ""
     for name, sh in (("LegRight" + tag, make_leg(1)), ("LegLeft" + tag, make_leg(-1)),
                      ("Tail", make_tail()), ("Cube", CUBE)):
         sh.exportStl(os.path.join(view, name + ".stl"))

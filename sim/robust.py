@@ -20,8 +20,8 @@ SCENARIOS = {
     "slippery":     {"friction": 0.5},
     "grippy":       {"friction": 1.1},
     "heavy brain":  {"brain_g": 75.0, "cube_g": 110.0},
-    "light head":   {"head_g": 10.0},
-    "heavy head":   {"head_g": 14.0},
+    "light head":   {"head_g": 18.0},
+    "heavy head":   {"head_g": 22.0},
 }
 
 GRID = dict(
