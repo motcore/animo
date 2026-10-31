@@ -63,6 +63,8 @@ P = dict(
     cap_wide_to=999.0,     #   only between these two y; toward the heel and
     cap_heel_x=0.0,        #   the toe it curves in (a quarter ellipse) to
     cap_toe_x=0.0,         #   these x at the very ends. Default: a rectangle
+    cap_g=0.1,         # g — the cap foot itself (uniform: the printed foot is
+                       #    this same solid, cad/animo_duck.py)
     foot_w_g=0.0,      # g — a weight low in each cap foot (Mugatu's wheel
                        #    weights): lowers the centre of mass
     foot_mu=0.0,       # >0: the cap feet in rubber, this friction, and they
@@ -275,7 +277,7 @@ def build(p):
             return mesh + "/>"
         return (mesh.replace('name="foot', 'name="shin').replace(' 1"', ' 0"') +
                 ' contype="0" conaffinity="0"/>'
-                f'<geom name="foot{side}" type="mesh" mesh="cap{side}" mass="0.0001"'
+                f'<geom name="foot{side}" type="mesh" mesh="cap{side}" mass="{kg(p["cap_g"])}"'
                 f' rgba=".95 .6 .2 1" {grip}/>' + (
                 f'<geom type="cylinder" size=".010 .003" mass="{kg(p["foot_w_g"])}"'
                 f' pos="{s * max(p["ball_gap"] / 2, 10) / 1000} {p["ball_y"] / 1000}'
