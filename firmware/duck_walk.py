@@ -11,12 +11,16 @@
 #   step the legs stop 2 s and the LED blinks the step's number (1, 2...).
 #   Changes the rhythm without a USB upload for each try.
 #
-# Which plug drives which wall and which way is "forward" differ per cube:
-# fill PINS and SIGN by hand (see notas/montaje-patito.md).
+# Angles go through cal.py (the dial's readings, firmware/calibrate.py), so
+# both legs swing the same; without it, the nominal US_PER_DEG. Which plug
+# drives which wall differs per cube: fill PINS by hand (notas/montaje-patito.md).
+# SIGN follows from the geometry: cal's + is clockwise seen from outside, so
+# a foot forward (+Y) is - on the right wall (+X) and + on the left.
 # The Wi-Fi radio stays on to keep the DAOKAI awake (O1.2-f).
 # Copy it as main.py to run it from the battery (servos UNPLUGGED while on
 # USB: the USB's 5 V reaches the split board through the ESP32's 5V pin):
 #   mpremote connect COM4 cp duck_walk.py :main.py
+#   mpremote connect COM4 cp cal.py :cal.py
 
 import math
 import network
@@ -26,10 +30,10 @@ from machine import Pin, PWM
 MODE = "park"
 
 PINS = {"right": 4, "left": 5}          # GPIO of each wall's plug
-SIGN = {"right": 1, "left": -1}         # + = foot forward
-TRIM = {"right": 0, "left": 0}          # us: straight down at 0
+SIGN = {"right": -1, "left": 1}         # cal's + (clockwise from outside) -> foot forward
+TRIM = {"right": 0, "left": 0}          # us: on top of cal.py, 0 once calibrated
 
-US_PER_DEG = 10.0       # MG90D: ~1000 us for ~90 deg (to check)
+US_PER_DEG = 10.0       # MG90D: ~1000 us for ~90 deg - only without cal.py
 # The simulator (2026-10-31): +-15 deg at 1.2 Hz walks ~10 cm/s on the
 # rounded feet; the window is about +-5 % of rhythm. The right leg starts
 # going BACK (phase 180): that start picks "forward" most often (~4 in 5;
@@ -49,15 +53,22 @@ ap = network.WLAN(network.AP_IF)        # keeps the DAOKAI awake
 ap.active(True)
 ap.config(essid="animo-duck")
 
+try:
+    import cal
+    to_us = cal.us
+except ImportError:                     # not calibrated: nominal, + us = clockwise
+    def to_us(pin, deg):
+        return 1500 + deg * US_PER_DEG
+
 servo = {}
 for name in ("right", "left"):          # one at a time: servos jumping to
     servo[name] = PWM(Pin(PINS[name]), freq=50)   # centre at once reset
-    servo[name].duty_ns((1500 + TRIM[name]) * 1000)  # the ESP32 (2026-10-26)
+    servo[name].duty_ns(int((to_us(PINS[name], 0) + TRIM[name]) * 1000))  # the ESP32 (2026-10-26)
     time.sleep(0.5)
 
 
 def put(name, deg):
-    us = 1500 + TRIM[name] + SIGN[name] * deg * US_PER_DEG
+    us = to_us(PINS[name], SIGN[name] * deg) + TRIM[name]
     servo[name].duty_ns(int(us * 1000))
 
 
