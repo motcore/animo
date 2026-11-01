@@ -17,12 +17,14 @@
 # SIGN follows from the geometry: cal's + is clockwise seen from outside, so
 # a foot forward (+Y) is - on the right wall (+X) and + on the left.
 # The Wi-Fi radio stays on to keep the DAOKAI awake (O1.2-f).
-# Copy it as main.py to run it from the battery (servos UNPLUGGED while on
-# USB: the USB's 5 V reaches the split board through the ESP32's 5V pin):
+# Copy it as main.py to run it from the battery. With a computer on the USB
+# it sends no pulses (usb_host: the USB's 5 V reaches the servos through the
+# ESP32's 5V pin), so they can stay plugged in, the switch OFF:
 #   mpremote connect COM4 cp duck_walk.py :main.py
 #   mpremote connect COM4 cp cal.py :cal.py
 
 import math
+import machine
 import network
 import time
 from machine import Pin, PWM
@@ -48,6 +50,22 @@ STEP_S = 20
 
 led = Pin(8, Pin.OUT, value=1)
 time.sleep(1)                           # let the supply settle
+
+
+def usb_host():
+    """True with a computer on the ESP32's USB: its USB block counts the
+    host's frames, one a millisecond (USB_SERIAL_JTAG_FRAM_NUM_REG, C3)."""
+    n = machine.mem32[0x60043024] & 0x7FF
+    time.sleep_ms(5)
+    return (machine.mem32[0x60043024] & 0x7FF) != n
+
+
+if usb_host():                          # on USB: the plugged servos would draw
+    for p in PINS.values():             # from it - no pulses, fast blink, and
+        Pin(p, Pin.OUT, value=0)        # mpremote can copy with them plugged
+    while True:
+        led.value(not led.value())
+        time.sleep(0.1)
 
 ap = network.WLAN(network.AP_IF)        # keeps the DAOKAI awake
 ap.active(True)

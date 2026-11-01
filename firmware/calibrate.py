@@ -11,11 +11,13 @@
 #   The dial should read just that on every wall.
 # MODE = "centre": all four to 1500 us (raw) and hold, to reseat a cross.
 #
-# The Wi-Fi radio stays on to keep the DAOKAI awake (O1.2-f). Servos
-# UNPLUGGED while on USB. Copy both files, then run from the battery:
+# The Wi-Fi radio stays on to keep the DAOKAI awake (O1.2-f). With a
+# computer on the USB it sends no pulses (usb_host): the servos can stay
+# plugged in, the switch OFF. Copy both files, then run from the battery:
 #   mpremote connect COM4 cp calibrate.py :main.py
 #   mpremote connect COM4 cp cal.py :cal.py
 
+import machine
 import network
 import time
 from machine import Pin, PWM
@@ -28,6 +30,22 @@ CHECK_DEG = 45
 
 led = Pin(8, Pin.OUT, value=1)
 time.sleep(1)                           # let the supply settle
+
+
+def usb_host():
+    """True with a computer on the ESP32's USB: its USB block counts the
+    host's frames, one a millisecond (USB_SERIAL_JTAG_FRAM_NUM_REG, C3)."""
+    n = machine.mem32[0x60043024] & 0x7FF
+    time.sleep_ms(5)
+    return (machine.mem32[0x60043024] & 0x7FF) != n
+
+
+if usb_host():                          # on USB: the plugged servos would draw
+    for p in PINS:                      # from it - no pulses, fast blink, and
+        Pin(p, Pin.OUT, value=0)        # mpremote can copy with them plugged
+    while True:
+        led.value(not led.value())
+        time.sleep(0.1)
 
 ap = network.WLAN(network.AP_IF)        # keeps the DAOKAI awake
 ap.active(True)
