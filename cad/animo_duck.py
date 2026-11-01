@@ -43,7 +43,7 @@ hub_recess = 0.2     # mm — the hub's face, below the wall's face
 cross_hole = 6.54    # mm — the hub's cross hole, deep from the wall's face
 
 # ── The printed cross spigot (as animo_trex.py) ─────────────────────────────
-spigot     = 4.86    # mm — cross, tip to tip (coupon: animo_trex.py)
+spigot     = 4.80    # mm — cross, tip to tip: the coupon (animo_trex.py) in the 4.90 hubs, 2026-11-01
 arm_less   = 3.0     # mm — arm width = spigot - 3.0
 spigot_len = 6.0     # mm — 0.34 short of the hole's floor
 boss_r     = 4.5     # mm — the spacer that rests on the hub

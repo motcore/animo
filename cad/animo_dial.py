@@ -33,7 +33,7 @@ pin_grow   = 0.15    # mm — PETG (the Technic coupon, 2026-10-20)
 PINS_XY    = [(-8.0, -16.0), (8.0, -16.0)]   # the two lower pin holes
 
 # ── The printed cross spigot (as animo_duck.py) ─────────────────────────────
-spigot     = 4.86    # mm — cross, tip to tip (coupon: animo_trex.py)
+spigot     = 4.80    # mm — cross, tip to tip: the coupon (animo_trex.py) in the 4.90 hubs, 2026-11-01
 arm_less   = 3.0     # mm — arm width = spigot - 3.0
 spigot_len = 6.0     # mm — 0.34 short of the hole's floor
 boss_r     = 4.5     # mm
