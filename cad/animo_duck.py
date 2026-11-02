@@ -43,8 +43,10 @@ hub_recess = 0.2     # mm — the hub's face, below the wall's face
 cross_hole = 6.54    # mm — the hub's cross hole, deep from the wall's face
 
 # ── The printed cross spigot (as animo_trex.py) ─────────────────────────────
-spigot     = 4.80    # mm — cross, tip to tip: the coupon (animo_trex.py) in the 4.90 hubs, 2026-11-01
-arm_less   = 3.0     # mm — arm width = spigot - 3.0
+spigot     = 4.65    # mm — cross, tip to tip. The plate prints fat: drawn 4.65 it measures
+                     #      4.65-4.73, the dial's pointer (fits every hub) 4.69-4.72
+arm_w      = 1.87    # mm — its own number: drawn 1.65 (spigot - 3.0) the plate measured 1.68
+                     #      and was loose, the pointer that fits measures 1.90, 2026-11-02
 spigot_len = 6.0     # mm — 0.34 short of the hole's floor
 boss_r     = 4.5     # mm — the spacer that rests on the hub
 stand_off  = 0.6     #      the plate stands 0.6 off the wall
@@ -77,7 +79,7 @@ flange_w   = 20.0    # mm — fore-aft
 screw_x    = 23.6    # mm — the two M3 out from the middle, at y = +-screw_y
 screw_y    = 6.0
 m3_clear   = 3.4     # mm — through the flange
-m3_pilot   = 2.6     # mm — into the foot: the M3 cuts its own thread
+m3_pilot   = 3.0     # mm — M3 self-tapping in PETG (the lids' 3.0, 2026-10-21; 2.6 would not take it)
 pilot_deep = 10.0    # mm — M3x12: 4 of flange + 8 in the foot
 head_r     = 2.9     # mm — an M3 cheese head's radius, + a little
 gusset     = (4.0, 6.0, 8.0)  # mm — the plate-flange rib: wide (y), in (x),
@@ -103,10 +105,9 @@ def cyl_z(r, z0, z1, x=0.0, y=0.0):
 
 
 def cross_x(span, x0, x1):
-    arm = span - arm_less
     a, b = min(x0, x1), max(x0, x1)
-    return box(a, b, -span / 2, span / 2, -arm / 2, arm / 2).fuse(
-        box(a, b, -arm / 2, arm / 2, -span / 2, span / 2)).removeSplitter()
+    return box(a, b, -span / 2, span / 2, -arm_w / 2, arm_w / 2).fuse(
+        box(a, b, -arm_w / 2, arm_w / 2, -span / 2, span / 2)).removeSplitter()
 
 
 def rot(shape, axis, deg):
@@ -285,6 +286,25 @@ def on_bed(shape, axis=None, deg=0.0):
     return s
 
 
+SPIGOT_TRY = [4.68, 4.74, 4.80]   # mm — the hubs vary: 4.80 fit one and jammed in another
+
+
+def make_coupon():
+    """Three spigots on numbered tabs, spigot up: try each in EVERY hub."""
+    parts = []
+    for i, sp in enumerate(SPIGOT_TRY):
+        x = i * 16.0
+        tab = Part.makeCylinder(6.0, 2.0, Vector(x, 0, 0))
+        spg = rot(cross_x(sp, 0, spigot_len), Y_AXIS, -90)   # along +Z
+        spg.translate(Vector(x, 0, 2.0))
+        t = tab.fuse(spg)
+        for k in range(i + 1):              # notches: 1, 2, 3
+            ang = 90 + 25 * k
+            t = t.cut(rot(box(5.0, 7.0, -0.6, 0.6, -1, 3), Z_AXIS, ang).translated(Vector(x, 0, 0)))
+        parts.append(t)
+    return parts[0].fuse(parts[1:]).removeSplitter()
+
+
 DOC_NAME = "Animo_Duck"
 if App.ActiveDocument and App.ActiveDocument.Name == DOC_NAME:
     App.closeDocument(DOC_NAME)
@@ -302,7 +322,8 @@ os.makedirs(out, exist_ok=True)
 # turned round: print two. The feet are mirror images: one of each.
 EXPORT = [("animo_duck_Plate", on_bed(PLATE[1], Y_AXIS, 90)),         # outer face down
           ("animo_duck_FootRight", on_bed(FOOT[1], X_AXIS, 180)),     # top down, sole up
-          ("animo_duck_FootLeft", on_bed(FOOT[-1], X_AXIS, 180))]
+          ("animo_duck_FootLeft", on_bed(FOOT[-1], X_AXIS, 180)),
+          ("animo_duck_SpigotCoupon", on_bed(make_coupon()))]
 for name, sh in EXPORT:
     sh.exportStl(os.path.join(out, name + ".stl"))
 print(f"\n  STL -> {out}  ({fails} FAIL)")

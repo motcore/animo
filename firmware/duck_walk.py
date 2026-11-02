@@ -29,9 +29,9 @@ import network
 import time
 from machine import Pin, PWM
 
-MODE = "park"
+MODE = "walk"
 
-PINS = {"right": 4, "left": 5}          # GPIO of each wall's plug
+PINS = {"right": 7, "left": 4}          # GPIO: east and west, walking north (the switch)
 SIGN = {"right": -1, "left": 1}         # cal's + (clockwise from outside) -> foot forward
 TRIM = {"right": 0, "left": 0}          # us: on top of cal.py, 0 once calibrated
 
@@ -47,6 +47,9 @@ LEAN = 0                # deg: both legs turned together, + = feet forward
 FADE_S = 2              # s: the swing grows from 0 over this
 SWEEP_FREQ = (1.10, 1.15, 1.20, 1.25, 1.30)
 STEP_S = 20
+START_FREQ = 1.0        # Hz: the start. Slower, the body rocks wider (2026-11-02,
+START_S = 5             # with the ballast); held this long, then FREQ over RAMP_S
+RAMP_S = 12
 
 led = Pin(8, Pin.OUT, value=1)
 time.sleep(1)                           # let the supply settle
@@ -101,11 +104,16 @@ if MODE == "park":
 def walk(freq, secs=None):
     """Legs from still, the swing growing over FADE_S; for secs, or for ever."""
     t0 = time.ticks_ms()
+    w = last = 0
     while True:
         t = time.ticks_diff(time.ticks_ms(), t0) / 1000
         if secs and t > secs:
             return
-        w = 2 * math.pi * freq * t
+        f = freq                        # walking for ever: the slow start first
+        if not secs and t < START_S + RAMP_S:
+            f = START_FREQ + (freq - START_FREQ) * max(0, t - START_S) / RAMP_S
+        w += 2 * math.pi * f * (t - last)
+        last = t
         legs = LEG_DEG * min(1.0, t / FADE_S)
         lean = LEAN * min(1.0, t / 2)
         step = legs * math.sin(w - math.radians(PHASE))

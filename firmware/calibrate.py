@@ -25,7 +25,9 @@ from machine import Pin, PWM
 MODE = "read"
 
 PINS = (4, 5, 6, 7)
+WALLS = (1, 2, 3, 4)   # the walls in the round (1 = GPIO4 ... 4 = GPIO7)
 HOLD_S = 6              # s at each position: time to read the dial
+MOVE_S = 20             # s between walls: time to move the dial
 CHECK_DEG = 45
 
 led = Pin(8, Pin.OUT, value=1)
@@ -85,11 +87,13 @@ else:
     STEPS = [us for p in PINS for us in (1500, 1050, 1500, 1950, 1500)]
 
 while True:
-    for i, p in enumerate(PINS):
-        blink(i + 1)
+    for wall in WALLS:
+        i = wall - 1
+        time.sleep(MOVE_S)
+        blink(wall)
         time.sleep(2)
         for us in STEPS[5 * i:5 * i + 5]:
-            put_us(p, us)
+            put_us(PINS[i], us)
             led.value(0)                # LED on: moving to it
             time.sleep(0.3)
             led.value(1)
