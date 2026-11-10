@@ -2,3 +2,4 @@ __pycache__/
 sim/.venv/
 sim/meshes/
 sim/out/
+MUJOCO_LOG.TXT

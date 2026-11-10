@@ -143,6 +143,14 @@ P = dict(
     servo_torque=0.2,  # N m — MG90D: ~2 kg cm
     freq0=0.0,         # Hz, the start's rhythm, climbing to freq over chirp_s
     chirp_s=0.0,       #    seconds (0: freq from the start)
+    start_s=0.0,       # s — freq0 held this long before the climb (the duck's
+                       #    slow start, 2026-11-02: 5 s at 1.0, 12 s to 1.2)
+    rail_r=0.0,        # mm — >0: the cap foot is only a rail along the contact
+                       #    path (out/rail_path.json, trace_foot.py): capsules
+                       #    of this radius lying on the sole, nothing else
+                       #    touches the floor
+    rail_toes=0.0,     # the rail carries this many toes too (rail_path.json
+                       #    "toes", one fan per count: trace_foot.py --toes n)
     trail_s=3.0,      # s of faint contact path the viewer keeps (0: none)
     servo_curve=0.0,   # 1: the torque falls with speed, a DC motor's line from
                        #    servo_torque (stalled) to servo_speed (no load);
@@ -260,6 +268,30 @@ def cap_stl(p, s):
     return dst
 
 
+RAIL = os.path.join(HERE, "out", "rail_path.json")
+
+
+def rail_geoms(p, side, s, grip):
+    """The rail foot: capsules of radius rail_r lying on the sole along the
+    contact path (trace_foot.py: points on the right sole and their outward
+    normals, mm in the hip's frame; the left one mirrored). The first is
+    foot{side}, the rest foot{side}{k}: all of them in the leg's body."""
+    import json
+    path = json.load(open(RAIL))
+    r = p["rail_r"]
+    runs = [path] + path.get("toes", {}).get(f"{p['rail_toes']:g}", [])
+    out = []
+    for run in runs:
+        c = [np.array(q) - r * np.array(n) for q, n in zip(run["points"], run["normals"])]
+        c = [q * np.array([s, 1, 1]) / 1000 for q in c]
+        for a, b in zip(c, c[1:]):
+            k = len(out)
+            out.append(f'<geom name="foot{side}{k or ""}" type="capsule" size="{r / 1000}"'
+                       f' fromto="{a[0]:.6f} {a[1]:.6f} {a[2]:.6f} {b[0]:.6f} {b[1]:.6f} {b[2]:.6f}"'
+                       f' mass="0.00001" rgba=".95 .6 .2 1" {grip}/>')
+    return "".join(out)
+
+
 def build(p):
     kg = lambda g: g / 1000.0
 
@@ -275,10 +307,13 @@ def build(p):
                     f'{p["foot_spin"] / 1000} 0.0001"')
         if not p["ball_r"]:
             return mesh + "/>"
+        cap = (f'<geom name="foot{side}" type="mesh" mesh="cap{side}" mass="{kg(p["cap_g"])}"'
+               f' rgba=".95 .6 .2 1" {grip}/>')
+        if p["rail_r"]:                 # the cap a ghost, the rail touches
+            cap = (cap.replace(' 1"', ' .25"').replace('name="foot', 'name="ghost')
+                   .replace("/>", ' contype="0" conaffinity="0"/>') + rail_geoms(p, side, s, grip))
         return (mesh.replace('name="foot', 'name="shin').replace(' 1"', ' 0"') +
-                ' contype="0" conaffinity="0"/>'
-                f'<geom name="foot{side}" type="mesh" mesh="cap{side}" mass="{kg(p["cap_g"])}"'
-                f' rgba=".95 .6 .2 1" {grip}/>' + (
+                ' contype="0" conaffinity="0"/>' + cap + (
                 f'<geom type="cylinder" size=".010 .003" mass="{kg(p["foot_w_g"])}"'
                 f' pos="{s * max(p["ball_gap"] / 2, 10) / 1000} {p["ball_y"] / 1000}'
                 f' {(4 - p["hip"]) / 1000}" contype="0" conaffinity="0"'
@@ -484,13 +519,23 @@ def frame_at(frames, t):
     return prev, "rest"
 
 
+def gait_angle(p, t):
+    """The rhythm's angle at time t (rad): freq0 held start_s seconds, then
+    climbing to freq over chirp_s (firmware/duck_walk.py's slow start)."""
+    f1, f0, T = p["freq"], p["freq0"] or p["freq"], p["chirp_s"]
+    S = min(t, p["start_s"])
+    u = t - S
+    w = f0 * S
+    if T and u < T:                 # the rhythm climbs from freq0 to freq
+        w += f0 * u + (f1 - f0) * u * u / (2 * T)
+    else:
+        w += f1 * u + ((f0 - f1) * T / 2 if T else 0)
+    return 2 * math.pi * w
+
+
 def targets(p, t):
     """The firmware's gait: (legR, legL, tail) in radians at time t."""
-    f1, f0, T = p["freq"], p["freq0"] or p["freq"], p["chirp_s"]
-    if T and t < T:                 # the rhythm climbs from freq0 to freq
-        w = 2 * math.pi * (f0 * t + (f1 - f0) * t * t / (2 * T))
-    else:
-        w = 2 * math.pi * (f1 * t + ((f0 - f1) * T / 2 if T else 0))
+    w = gait_angle(p, t)
     tail = p["tail_deg"] * min(1.0, t / 2)
     legs = p["leg_deg"] * min(1.0, max(0.0, (t - p["tail_only_s"]) / p["fade_s"]))
     lean = p["lean"] * min(1.0, t / 2)
@@ -510,6 +555,8 @@ class Run:
         self.frames = keyframes(p) if p["gait"] == 2 else None
         self.feet = [mujoco.mj_name2id(self.m, mujoco.mjtObj.mjOBJ_GEOM, n)
                      for n in ("footR", "footL")]
+        self.foot_body = [self.m.geom_bodyid[g] for g in self.feet]  # a rail foot
+                                        # is many geoms: tell them by body
         self.load = np.zeros(2)      # N on each foot, this step
 
     def step(self):
@@ -541,8 +588,9 @@ class Run:
         f6 = np.zeros(6)
         for i in range(d.ncon):
             c = d.contact[i]
-            for j, g in enumerate(self.feet):
-                if g in (c.geom1, c.geom2):
+            on = (m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2])
+            for j, b in enumerate(self.foot_body):
+                if b in on:
                     mujoco.mj_contactForce(m, d, i, f6)
                     self.load[j] += f6[0]
         if self.start is None:
@@ -596,7 +644,7 @@ def show(p):
     def mark():
         for k, (g, b, _) in enumerate(feet):
             pts = [d.contact[i].pos for i in range(d.ncon)
-                   if g in (d.contact[i].geom1, d.contact[i].geom2)]
+                   if b in (m.geom_bodyid[d.contact[i].geom1], m.geom_bodyid[d.contact[i].geom2])]
             t = trace[k]
             while t and d.time - t[0][0] > p["trail_s"]:
                 t.pop(0)
