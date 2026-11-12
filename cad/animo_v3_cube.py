@@ -7,8 +7,13 @@
 # servo that lies along the wall. So a SENSOR GEAR, as many teeth as the
 # output gear (1:1, the angle stays absolute), meshes below the output, turns
 # on a pin of the wall, and carries the magnet on its back; the AS5600 board
-# hangs behind it on two posts of the wall, part of the module. The Technic
-# pins move to (+16,+8), (+16,-8), (-24,-16). The brain box
+# hangs behind it, part of the module, on two posts of the wall. A KEEPER
+# plate 0.2 behind the sensor gear stops it backing onto the chip: its two
+# tubes slide over the posts' thinner ends, so it is trapped between the
+# posts' step and the board, and the two M3 screws bite the posts only — one
+# plastic part screwed (user, 2026-11-12). The Technic
+# pins move to (+16,+8), (+24,-8), (-24,-16); the servo gear goes below the
+# output (sv_dir) and the wall screws to (-24,-24) / (+24,+24). The brain box
 # of v2 is gone: battery above the servo pack, boards under it (ghosts here).
 #
 # --- v2's notes, still true unless v3 says otherwise ---
@@ -125,9 +130,13 @@ wall_min = 0.6   # mm — skin left behind the servo gear's boss recess: 3 layer
 cube_side  = 72.0   # mm — 9 LEGO modules (decided 2026-11-11); odd, so the output
                     #      stays on the Technic grid
 # Sensor gear: same module and teeth as the output gear (1:1), straight under it.
-sg_dir     = -70.0  # deg — where it sits round the output, in the wall plane (x, z):
-                    #      at -90 (straight under) its board hits the servo; from
-                    #      -75 on, the board clears the servo's side
+sg_dir     = -60.0  # deg — where it sits round the output, in the wall plane (x, z):
+                    #      clear of the servo gear and, with its board, of its servo
+# The servo gear sits BELOW the output's height (user, 2026-11-12): that pulls
+# the neighbour servo, the one lying along this wall, 1.9 mm in from the wall,
+# so behind the AS5600 board there is room for its soldered joints, its box's
+# wall and the neighbour's sleeve; and the servos end lower, under the battery.
+sv_dir     = 210.0  # deg — the servo gear round the output (180 = level, on -x)
 sn_pin_d   = 4.0    # mm — the wall's pin it turns on
 sn_bore    = 0.30   # mm — bore over the pin (PETG sliding fit +0.25, a bit freer)
 sn_boss_r  = 4.0    # mm — boss behind the teeth that holds the magnet
@@ -141,16 +150,31 @@ mag_floor  = 0.6    # mm — boss left between the pocket and the pin's bore
 # AS5600 AYWHP board, measured 2026-11-12 (+0.04): 22.90 x 23.45 x 1.66 PCB,
 # 3.25 over the chip (chip side 1.59), nothing on the back, chip centred,
 # 4 screw holes 3.50 in from both edges, pins in two rows (4 and 3) parallel
-# to the 22.90 sides, 4.43 in from them. Laid with 22.90 across (x), the pin
-# rows run across, above and below the chip. Chip side toward the magnet.
+# to the 22.90 sides, 4.43 in from them: row of 3 = VCC OUT GND, row of 4 =
+# DIR SCL SDA GPO. Wired by I2C: VCC (3.3 V), GND, SCL, SDA; DIR bridged to
+# GND on the chip side; OUT and GPO unused. Chip side toward the magnet.
+# Laid with 22.90 across (x). The servo lying along the wall still passes
+# behind the board, but 4.1 mm back (sv_dir): room for the trimmed joints,
+# the box's wall and the neighbour's sleeve. Wires come in from the chip side.
 as_w, as_h = 22.90, 23.45   # mm — x, z
 as_pcb     = 1.66
 as_chip    = 3.25 - 1.66    # mm — chip side, PCB face to the chip's top
 as_hole_in = 3.50   # mm — screw holes in from both edges
-as_hole_d  = 3.0    # mm — NOT MEASURED: typical; posts take M2 self-tappers
+as_hole_d  = 3.60   # mm — measured 2026-11-12 (3.56 + 0.04): M3 self-tappers
 as_air     = 0.8    # mm — magnet face to chip top (AS5600 wants 0.5-3)
-as_post_d  = 5.0    # mm — two posts at the LOWER holes, M2 pilots; the upper
+as_post_d  = 6.0    # mm — two posts at the LOWER holes, M3 pilots; the upper
                     #      holes stay free (the output gear sweeps there)
+post_in_d  = 5.0    # mm — the posts' thin end, through the keeper, to the board
+                    #      (M3 pilot 3.0: 1.0 of wall)
+post_big_d = 10.0   # mm — the posts, wall side of the keeper: this round, less a
+                    #      bite where the sensor gear sweeps, so the keeper rests
+                    #      on a broad face, not a 0.35 ring (user, 2026-11-12)
+keeper_tube = 8.0   # mm — its tubes round the posts' thin ends
+keeper_slide = 0.3  # mm — tube bore over the post (PETG sliding +0.25)
+keeper_short = 0.1  # mm — tubes stop short of the board: the board seats on
+                    #      the posts, the keeper keeps this much play
+keeper_r   = 8.0    # mm — its disc round the sensor gear (the gear's tip radius)
+keeper_hole = 0.3   # mm — round the magnet's boss
 
 # ── Clearances and walls ────────────────────────────────────────────────────
 clr      = 0.5   # mm — general clearance between parts that do not touch
@@ -188,7 +212,7 @@ skirt_in = 1.5   # mm — the decks' skirt reaches this far inside the wall plat
 # decks behind the wall. The decks stay ONE part: the top deck is the
 # bottom one turned over, which takes each wall's lower-corner boss to the
 # opposite wall's upper corner on the other diagonal.
-WALL_SCREW_AT = (-2, -2)  # grid steps (x, z) of the bottom deck's boss; the top
+WALL_SCREW_AT = (-3, -3)  # grid steps (x, z) of the bottom deck's boss; the top
                           #      deck's lands at (+2, +2) on every wall
 ws_boss_w   = 5.0   # mm — boss width (measured room: 5 wide clears the module
                     #      sliding out by 0.6, 2026-10-20)
@@ -224,7 +248,7 @@ tech_len     = 7.8    # mm — a beam's thickness: the boss's length. Counterbor
                       #      0.8 at both ends like a beam; the pin goes 7.1 past
                       #      its collar and its ridge clicks into the far one
 tech_boss_d  = 7.6    # mm — boss round each pin hole, inside the wall
-TECH_PINS    = [(2, 1), (2, -1), (-3, -2)]   # v3: clear of the servo, the gears
+TECH_PINS    = [(2, 1), (3, -1), (-3, -2)]   # v3: clear of the servo, the gears
                       # and the AS5600 posts; (-2, +-1) hit the servo gear
                       # pin holes in grid steps (x, z) from the output: two
                       # under it at +-8 and one in the upper corner on the
@@ -291,7 +315,8 @@ a_mesh  = 2 * r_pitch                  # centre distance, equal gears
 _stack  = max(g_gap + g_w_min + g_gap,
               horn_lift + horn_hub_h + horn_grow + g_gap - (wall_t - wall_min))
 y_tower = cube_side / 2.0 - wall_t - _stack     # tower top
-sv_x0   = -(a_mesh + sv_case_t / 2.0)   # north servo: X from sv_x0 ...
+sv_z    = a_mesh * math.sin(math.radians(sv_dir))   # servo shaft height
+sv_x0   = a_mesh * math.cos(math.radians(sv_dir)) - sv_case_t / 2.0   # north servo: X from sv_x0 ...
 sv_x1   = sv_x0 + sv_case_t             # ... to sv_x1
 pack_half = y_tower
 y_base  = y_tower - sv_tower_h          # = -pack_half + thickness + gap
@@ -300,7 +325,7 @@ y_tab1  = y_tab0 + sv_tab_t
 
 # Vertical: the shaft at the case's LOWER end, at z = 0 (the output's height).
 x_sv    = (sv_x0 + sv_x1) / 2.0         # shaft: centred in the thickness
-case_z0 = -sv_shaft_end
+case_z0 = sv_z - sv_shaft_end
 case_z1 = case_z0 + sv_case_len
 tab_z0  = case_z0 - sv_tab_out
 tab_z1  = case_z1 + sv_tab_out
@@ -323,7 +348,7 @@ y_wo    = y_wi + wall_t                 # wall outer face = cube half side
 half_in = y_wi                          # cube centre to a wall's inner face
 
 # Shafts in the wall plane (x, z).
-S_xz = (x_sv, 0.0)                      # servo shaft
+S_xz = (x_sv, sv_z)                     # servo shaft
 O_xz = (0.0, 0.0)                       # output, wall centre
 Q_xz = (a_mesh * math.cos(math.radians(sg_dir)),
         a_mesh * math.sin(math.radians(sg_dir)))   # sensor gear
@@ -333,6 +358,10 @@ y_sb    = y_g0 - sn_boss_l              # boss's back face = magnet's face
 y_chip  = y_sb - as_air                 # chip top
 y_pcbf  = y_chip - as_chip              # PCB, chip side
 y_pcbb  = y_pcbf - as_pcb               # PCB, back
+y_kf    = y_g0 - g_gap                  # keeper, gear side: the posts end here
+y_kb    = y_sb                          # keeper, board side: flush with the
+                                        #      magnet boss's back (user, 2026-11-12)
+keeper_t = y_kf - y_kb
 AS_HOLES = [(Q_xz[0] + sx * (as_w / 2.0 - as_hole_in), Q_xz[1] + sz * (as_h / 2.0 - as_hole_in))
             for sz in (-1, 1) for sx in (-1, 1)]       # lower two first
 
@@ -456,7 +485,7 @@ def make_servo():
     tabs = box(sv_x0, sv_x1, y_tab0, y_tab1, tab_z0, tab_z1)
     for hz in tab_hole_z:
         tabs = tabs.cut(cyl_y(x_sv, hz, sv_tab_hole_d / 2.0, y_tab0 - 1, y_tab1 + 1))
-    spline = cyl_y(x_sv, 0.0, sv_spline_d / 2.0, y_tower - 0.01,
+    spline = cyl_y(x_sv, sv_z, sv_spline_d / 2.0, y_tower - 0.01,
                    y_tower + sv_spline_h)
     return case.fuse([tower, tabs, spline]).removeSplitter()
 
@@ -466,16 +495,16 @@ def _horn(grow, y_top_extra=0.0):
     with the hub's top. y_top_extra lifts the pocket's top through the gear."""
     y0 = y_horn - horn_hub_h
     hub_g = grow if grow == 0.0 else horn_hub_grow
-    hub = cyl_y(x_sv, 0.0, horn_hub_d / 2.0 + hub_g, y0 - grow, y_horn + y_top_extra)
+    hub = cyl_y(x_sv, sv_z, horn_hub_d / 2.0 + hub_g, y0 - grow, y_horn + y_top_extra)
     half = horn_arm_len / 2.0 + grow
     arms = box(x_sv - half, x_sv + half, y_horn - horn_arm_t - grow,
-               y_horn + y_top_extra, -horn_arm_w / 2.0 - grow, horn_arm_w / 2.0 + grow)
+               y_horn + y_top_extra, sv_z - horn_arm_w / 2.0 - grow, sv_z + horn_arm_w / 2.0 + grow)
     return hub.fuse(arms)
 
 
 def make_horn():
     h = _horn(0.0).removeSplitter()
-    return h.cut(cyl_y(x_sv, 0.0, sv_spline_d / 2.0, y_tower - 1, y_horn - 1.0))
+    return h.cut(cyl_y(x_sv, sv_z, sv_spline_d / 2.0, y_tower - 1, y_horn - 1.0))
 
 
 def make_servo_gear():
@@ -484,11 +513,11 @@ def make_servo_gear():
     bed, the boss up), so the horn's pocket opens upward."""
     g = make_gear(S_xz[0], S_xz[1], PH_S, y_g0, y_g1)
     if y_sg1 > y_g1:
-        g = g.fuse(cyl_y(x_sv, 0.0, sg_boss_r, y_g1 - 0.01, y_sg1)).removeSplitter()
+        g = g.fuse(cyl_y(x_sv, sv_z, sg_boss_r, y_g1 - 0.01, y_sg1)).removeSplitter()
     g = g.cut(_horn(horn_grow, 1.0))
     # The spline passes through the floor under the horn; that floor is also
     # what stops the horn sliding through toward the servo.
-    return g.cut(cyl_y(x_sv, 0.0, sv_spline_d / 2.0 + clr, y_g0 - 1, y_sg1))
+    return g.cut(cyl_y(x_sv, sv_z, sv_spline_d / 2.0 + clr, y_g0 - 1, y_sg1))
 
 
 def hex_y(af, y0, y1):
@@ -547,7 +576,7 @@ def make_wall():
     # runs to the wall UNDER the gear's tip.
     pz0, pz1 = tab_z0, case_z0 - post_gap
     y_stop = y_g0 - clr
-    z_under = -r_tip - clr                      # top of the step, under the gear
+    z_under = sv_z - r_tip - clr                # top of the step, under the gear
     z_low = z_under - post_step
     lx1 = min(sv_x1, Q_xz[0] - as_w / 2.0 - clr)   # v3: beside the AS5600 board
     posts = [box(sv_x0, sv_x1, y_tab1, y_wi + 0.01, case_z1 + post_gap, tab_z1),
@@ -557,7 +586,10 @@ def make_wall():
     posts.append(cyl_y(Q_xz[0], Q_xz[1], sn_pin_d / 2.0, y_sb + mag_t + mag_floor + 0.3,
                        y_wi + 0.01))
     for hx, hz in AS_HOLES[:2]:
-        posts.append(cyl_y(hx, hz, as_post_d / 2.0, y_pcbf, y_wi + 0.01))
+        posts.append(cyl_y(hx, hz, as_post_d / 2.0, y_kf, y_wi + 0.01))
+        posts.append(cyl_y(hx, hz, post_big_d / 2.0, y_kf, y_wi + 0.01).cut(
+            cyl_y(Q_xz[0], Q_xz[1], r_tip + clr, y_kf - 1, y_wi + 1)))
+        posts.append(cyl_y(hx, hz, post_in_d / 2.0, y_pcbf, y_kf + 0.01))
     lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - d, y_wi + 0.01)
                for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH)]
     w = plate.fuse(posts + lbosses).removeSplitter()
@@ -569,7 +601,7 @@ def make_wall():
             w = w.cut(_col_foot(sx, 1, top, foot_clear))   # north wall's corners
     # Recess behind the servo gear's boss.
     if sg_recess > 0:
-        w = w.cut(cyl_y(x_sv, 0.0, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
+        w = w.cut(cyl_y(x_sv, sv_z, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
     # Output: the hub's plain bearing hole, with a 45 deg conical seat for its
     # flange (hub_clear off the flange's cone all round).
     w = w.cut(cyl_y(0, 0, hub_d / 2.0 + hub_clear, y_wi - 1, y_wo + 1))
@@ -578,7 +610,7 @@ def make_wall():
     w = w.cut(Part.makeCone(hub_d / 2.0 + hub_clear, hub_d / 2.0 + hub_clear + h_c,
                             h_c, v(0, y_c0, 0), Y_AXIS))
     for hx, hz in AS_HOLES[:2]:                 # board screws, from behind
-        w = w.cut(cyl_y(hx, hz, m2_pilot / 2.0, y_pcbf - 1, y_pcbf + 6.0))
+        w = w.cut(cyl_y(hx, hz, m3_pilot / 2.0, y_pcbf - 1, y_pcbf + 8.0))
     # Servo screws: M2 pilots up the posts.
     for hz in tab_hole_z:
         w = w.cut(cyl_y(x_sv, hz, m2_pilot / 2.0, y_tab1 - 1, y_tab1 + 6.0))
@@ -609,6 +641,29 @@ def make_sensor_gear():
     g = g.cut(cyl_y(Q_xz[0], Q_xz[1], (sn_pin_d + sn_bore) / 2.0,
                     y_sb + mag_t + mag_floor, y_g1 + 1))
     return g.cut(cyl_y(Q_xz[0], Q_xz[1], (mag_d + mag_grow) / 2.0, y_sb - 1, y_sb + mag_t))
+
+
+def make_keeper():
+    """Keeper: a disc behind the sensor gear's teeth (0.2 off them), a hole for
+    the magnet's boss, and two tubes that slide over the posts' thin ends,
+    down to just short of the board. Trapped between the posts' step and the
+    board; not screwed. Printed flat, the gear side down."""
+    k = cyl_y(Q_xz[0], Q_xz[1], keeper_r, y_kb, y_kf)
+    for hx, hz in AS_HOLES[:2]:
+        k = k.fuse(cyl_y(hx, hz, keeper_tube / 2.0, y_pcbf + keeper_short, y_kf))
+        # web from the tube to the disc, as wide as the tube
+        ang = math.atan2(hz - Q_xz[1], hx - Q_xz[0])
+        mx, mz = (hx + Q_xz[0]) / 2.0, (hz + Q_xz[1]) / 2.0
+        L = math.hypot(hx - Q_xz[0], hz - Q_xz[1])
+        web = box(-L / 2.0, L / 2.0, y_kb, y_kf, -as_post_d / 2.0, as_post_d / 2.0)
+        web.rotate(ORIGIN, Y_AXIS, -math.degrees(ang))
+        web.translate(v(mx, 0, mz))
+        k = k.fuse(web)
+    k = k.removeSplitter()
+    k = k.cut(cyl_y(Q_xz[0], Q_xz[1], sn_boss_r + keeper_hole, y_kb - 1, y_kf + 1))
+    for hx, hz in AS_HOLES[:2]:
+        k = k.cut(cyl_y(hx, hz, (post_in_d + keeper_slide) / 2.0, y_pcbf - 1, y_kf + 1))
+    return k
 
 
 def make_magnet():
@@ -781,7 +836,8 @@ MODULE = [("Wall", make_wall(), (0.95, 0.75, 0.30), 0),
           ("OutputHub", make_output_hub(), (0.85, 0.45, 0.20), 0),
           ("SensorGear", make_sensor_gear(), (0.80, 0.90, 0.80), 0),
           ("Magnet", make_magnet(), (0.60, 0.60, 0.65), 0),
-          ("AS5600", make_as5600(), (0.15, 0.50, 0.25), 0)]
+          ("AS5600", make_as5600(), (0.15, 0.50, 0.25), 0),
+          ("Keeper", make_keeper(), (0.95, 0.60, 0.20), 0)]
 MODULE += [(f"TechPin{i}", make_tech_pin(cx, cz), (0.15, 0.30, 0.75), 50)
            for i, (cx, cz) in enumerate(TECH_XZ)]
 MODULE.append(("TechAxle", make_tech_axle(), (0.25, 0.25, 0.25), 50))
@@ -832,6 +888,20 @@ for _obj in list(doc.Objects):
         _groups[_label].Label = _label
     _groups[_label].addObject(_obj)
 doc.recompute()
+# Only the north wall shows when the macro opens (we are working on the wall,
+# 2026-11-12): everything else is hidden, not removed — select a group in the
+# tree and press Space to show it again.
+SHOW_ONLY = "_N"     # suffix of the parts left visible; None shows everything
+if HAS_GUI and getattr(App, "GuiUp", 0) and SHOW_ONLY:
+    for _g in _groups.values():
+        _vis = False
+        for _obj in _g.Group:
+            _on = _obj.Name.endswith(SHOW_ONLY)
+            _obj.ViewObject.Visibility = _on
+            _vis = _vis or _on
+        _g.ViewObject.Visibility = _vis
+        for _obj in _g.Group:            # showing the group may show them all
+            _obj.ViewObject.Visibility = _obj.Name.endswith(SHOW_ONLY)
 if HAS_GUI and getattr(App, "GuiUp", 0):
     Gui.SendMsgToActiveView("ViewFit")
     Gui.activeDocument().activeView().viewIsometric()
@@ -843,7 +913,7 @@ if EXPORT_STL:
     _pdir = os.path.join(_here, "stl", "animo_v3", MATERIAL)
     os.makedirs(_pdir, exist_ok=True)
     _by = dict((n, sh) for n, sh, c, t in MODULE)
-    for _n in ("Wall", "ServoGear", "OutputGear", "OutputHub", "SensorGear"):
+    for _n in ("Wall", "ServoGear", "OutputGear", "OutputHub", "SensorGear", "Keeper"):
         _by[_n].exportStl(os.path.join(_pdir, f"animo_v3_{_n}.stl"))
     DECK.exportStl(os.path.join(_pdir, "animo_v3_Deck.stl"))
     for _gr in cross_try:
@@ -861,7 +931,8 @@ if RUN_CHECKS is None:
 ALLOWED = {("Horn", "Servo"),             # horn on the spline
            ("Horn", "ServoGear"),         # horn in its pocket
            ("SensorGear", "OutputGear"),  # meshing
-           ("AS5600", "Wall"),             # on its posts (contact)
+           ("Keeper", "Wall"),             # on the posts' step (contact)
+           ("AS5600", "Wall"),             # on the posts' ends (contact)
            ("ServoGear", "OutputGear"),                        # meshing
            ("OutputHub", "OutputGear"),                        # pressed hex
            ("TechPin", "Wall"),                                # in its hole
@@ -930,6 +1001,10 @@ if RUN_CHECKS:
                       ("SensorGear_N", "ServoGear_N", "> 0"),
                       ("SensorGear_N", "Wall_N", "> 0, turns on its pin"),
                       ("Magnet_N", "AS5600_N", "> 0"),
+                      ("Keeper_N", "SensorGear_N", "> 0, 0.2 behind its teeth"),
+                      ("Keeper_N", "OutputGear_N", "> 0"),
+                      ("Keeper_N", "Servo_N", "> 0"),
+                      ("Keeper_N", "Magnet_N", "> 0"),
                       ("Battery", "Servo_N", "> 0"),
                       ("Battery", "DeckTop", "> 0"),
                       ("MainBoard", "AS5600_N", "> 0"),
@@ -956,7 +1031,7 @@ if RUN_CHECKS:
     stay = [n for n in names if not n.endswith("_N") and not n.startswith("Tech")]
     hits = set()
     for m in ("Wall_N", "Servo_N", "ServoGear_N", "Horn_N", "OutputGear_N",
-              "OutputHub_N", "SensorGear_N", "Magnet_N", "AS5600_N"):
+              "OutputHub_N", "SensorGear_N", "Magnet_N", "AS5600_N", "Keeper_N"):
         for dy in range(1, 32, 2):
             sh = by[m].copy()
             sh.translate(v(0, dy, 0))
@@ -1014,7 +1089,9 @@ if RUN_CHECKS:
           f" air {y_sb - y_chip:.2f}")
     print(f"  INSIDE: LiPo {battery[0]:.0f}x{battery[1]:.2f}x{battery[2]:.2f} over the pack"
           f" (z {tab_z1 + clr:.1f}..{tab_z1 + clr + battery[2]:.1f}); boards (placeholder {board_box}) under it")
-    print("  OPEN: AS5600 hole Ø not measured (3.0 assumed); wiring; USB-C, switch; ports")
+    print(f"  KEEPER: plate {keeper_t:.1f} behind the sensor gear (play {g_gap}), tubes over the posts' Ø{post_in_d:.0f} ends;"
+          f" board on the posts, 2 x M3x8 self-tapping into the posts only")
+    print("  OPEN: wiring; USB-C, switch; ports")
     print("=" * 72)
 else:
     print(f"Animo v3: geometry only, checks skipped. Cube side {2 * y_wo:.1f} mm")
