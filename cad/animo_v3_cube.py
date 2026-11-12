@@ -1,0 +1,1020 @@
+# Animo v3 — the 72 mm autonomous cube (Motcore v2), LEGO Technic faces
+# FreeCAD Python Macro
+#
+# v3 (2026-11-12) = v2's wall module and frame, grown to 72 mm (9 LEGO modules),
+# plus an AS5600 per wall. The AS5600 cannot sit behind the output hub: the
+# magnet would go behind the 6.54 deep cross and the board would hit the
+# servo that lies along the wall. So a SENSOR GEAR, as many teeth as the
+# output gear (1:1, the angle stays absolute), meshes below the output, turns
+# on a pin of the wall, and carries the magnet on its back; the AS5600 board
+# hangs behind it on two posts of the wall, part of the module. The Technic
+# pins move to (+16,+8), (+16,-8), (-24,-16). The brain box
+# of v2 is gone: battery above the servo pack, boards under it (ghosts here).
+#
+# --- v2's notes, still true unless v3 says otherwise ---
+#
+# Not a clutch: one MG90D (position) or MG90S 360 (continuous) per side wall,
+# both the same body, so ONE wall module serves both. A blank wall is the
+# same plate without the servo. Top and bottom are for stacking and for the
+# half-cube "brain" (battery, ESP32, drivers) — not drawn yet.
+#
+# The rules this file is built on (user, 2026-10-14/15):
+#   - every output shaft on the CENTRE of its wall: symmetry is fundamental;
+#   - the outer face is FLAT and LEGO TECHNIC compatible (user, 2026-10-19):
+#     the output is a Technic CROSS hole in the hub, flush with the face, and
+#     three Technic pin holes on the 8 mm grid (two under it at +-8, one in
+#     an upper corner) hold the model on with bought friction pins; LEGO builds and printed models use
+#     the same face. v1 had a female D and four magnets: the magnets could
+#     come loose (a hazard) and the D made you aim the model by hand. The
+#     cube parks every output at one angle before a model goes on, and the
+#     model keeps its own part parked there, so they meet without aiming;
+#   - all four wall modules are IDENTICAL, only rotated about Z;
+#   - a wall comes out WITHOUT OPENING THE CUBE (user, 2026-10-20): the
+#     module (wall, servo, gears, hub) slides straight out along the servo's
+#     axis; two M2x6 countersunk screws in the face, on one diagonal of the
+#     8 mm grid, hold it to bosses on the decks. No tongues, no grooves.
+#
+# Layout (the user's, 2026-10-15): the four servos stand upright — case length
+# vertical, shaft toward their own wall — in a pinwheel round the cube's
+# centre, each one's base against its neighbour's side. Seen from above the
+# pack is a square of (servo height + servo thickness), with a square hole in
+# the middle for the wiring. Each wall's gears are flat discs parallel to the
+# wall, in the thin slab between the servo pack and the wall: the neighbour
+# servo that lies along that wall stays behind the slab. The servo's shaft is
+# ~14 mm off the wall centre; two equal gears, servo gear -> output gear, bring
+# it to the centre 1:1 with the servo's whole travel (~180 deg, or endless on a
+# 360). The servo gear sweeps where the lower tab's post would run, so that
+# post steps down and passes UNDER the gear on its way to the wall.
+#
+# Coordinates: origin = cube centre, +Z up. One module is built for the +Y
+# (north) wall: +Y outward, X across the wall, Z up. It is then rotated onto
+# its wall about Z — rotations only, never a mirror.
+#
+# Run headless to read the checks:
+#   "C:/Program Files/FreeCAD 1.0/bin/freecadcmd.exe" animo_v2_cube.py
+# or from FreeCAD: Macro -> Macros -> animo_v2_cube.py -> Execute
+
+import FreeCAD as App
+import Part
+import math
+import os
+
+try:
+    import FreeCADGui as Gui
+    HAS_GUI = True
+except ImportError:
+    HAS_GUI = False
+
+# ═══════════════════════════════════════════════════════════════════
+# PARAMETERS
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Material: sets the fits that differ between them, and where the STLs go ─
+# The fits below are the PLA ones, tested 2026-10-17. PETG opens the ROUND
+# holes 0.1 mm (its coupons, T1.2, printed large holes ~0.1 tighter: 688 16.2
+# vs 16.1, 6805 37.3 vs 37.2). Flat faces (hex, grooves) and the M3 thread
+# stay. Headless, ANIMO_MATERIAL=PETG picks it without editing the file.
+MATERIAL = os.environ.get("ANIMO_MATERIAL", "PETG")    # "PETG" (now) or "PLA"
+
+# ── Servo MG90D / MG90S 360 (datasheet, same as the v6 macro) ───────────────
+sv_case_len  = 22.4   # mm — case length (here vertical, Z)
+sv_case_t    = 12.5   # mm — case thickness (here along X, across the wall)
+sv_case_h    = 22.4   # mm — case height, base to the top of the main case
+sv_tower_h   = 28.2   # mm — base to the top of the gear tower
+sv_tower_len = 12.2   # mm — the tower's length, at the shaft's end
+sv_spline_h  = 4.0    # mm — splined shaft standing off the tower
+sv_spline_d  = 4.5    # mm — spline outer diameter: the horn's bore reads 4.28 / 4.49
+                      #      (minor / major of its spline), 2026-10-15
+sv_shaft_end = 6.25   # mm — shaft axis from the case's end, along its length
+sv_tab_z0    = 18.0   # mm — base to the underside of the tab plate
+sv_tab_t     = 2.5    # mm — tab plate thickness
+sv_tab_out   = 4.7    # mm — how far each tab reaches past the case
+sv_tab_hole  = 2.35   # mm — tab hole centre, in from the tab's tip
+sv_tab_hole_d = 2.0   # mm — tab hole (M2 screw)
+
+# ── The servo's own double horn, pocketed in the servo gear ─────────────────
+# The factory horn grips the spline; its arms, cut down, key it in the gear.
+# No horn screw: the wall, g_gap behind the gear, keeps it on the spline.
+# Measured 2026-10-15 (averages of 3-5 readings, +0.04 caliper).
+horn_hub_d   = 6.82   # mm — avg 6.78 + 0.04
+horn_hub_h   = 4.69   # mm — avg 4.65 + 0.04
+horn_arm_t   = 2.08   # mm — arms' thickness, flush with the hub's top (2.04 + 0.04)
+horn_arm_w   = 5.13   # mm — their width where they meet the hub (avg 5.09 + 0.04)
+horn_arm_len = 9.0    # mm — tip to tip, CUT to this (the gear's root is Ø12.4)
+horn_lift    = 1.65   # mm — the hub's underside above the tower. Measured 2026-10-20:
+                      #      tower to the horn's top 6.34 (6.30 + 0.04), so 6.34 - hub
+                      #      4.69. The cube follows it
+horn_grow    = 0.2    # mm — pocket over the horn's ARMS (holes print ~0.2 small)
+horn_hub_grow = 0.2   # mm — pocket over its hub: a PRESS fit — it needs a firm
+                      #      push and then seats perfectly (tested 2026-10-17)
+
+# ── Gears: two identical spur gears per wall, 1:1 ───────────────────────────
+g_mod   = 0.8    # mm — module (prints with a 0.4 nozzle)
+g_z     = 18     # teeth. Their centre distance sets where the servo stands:
+                 #      the pinwheel opens up if it has to
+g_alpha = 20.0   # deg — pressure angle
+g_gap   = 0.2    # mm — axial gap: servo pack to the gears, gears to the wall
+                 #      (0.3 in v1; tightened for the 56 mm LEGO cube)
+g_w_min = 3.7    # mm — face width at least; the gears take whatever the slab gives
+wall_min = 0.6   # mm — skin left behind the servo gear's boss recess: 3 layers,
+                 #      printed on the bed, so it comes out clean (user: as thin
+                 #      as it has to be, 2026-10-20). It only closes the face and
+                 #      keeps the gear on the spline. 1.6 in v1
+
+# ── v3: cube size and the angle sensor ──────────────────────────────────────
+cube_side  = 72.0   # mm — 9 LEGO modules (decided 2026-11-11); odd, so the output
+                    #      stays on the Technic grid
+# Sensor gear: same module and teeth as the output gear (1:1), straight under it.
+sg_dir     = -70.0  # deg — where it sits round the output, in the wall plane (x, z):
+                    #      at -90 (straight under) its board hits the servo; from
+                    #      -75 on, the board clears the servo's side
+sn_pin_d   = 4.0    # mm — the wall's pin it turns on
+sn_bore    = 0.30   # mm — bore over the pin (PETG sliding fit +0.25, a bit freer)
+sn_boss_r  = 4.0    # mm — boss behind the teeth that holds the magnet
+sn_boss_l  = 2.0    # mm — its length behind the teeth
+# Magnet (AS5600 kit), measured 2026-11-12 (+0.04): Ø4.00 x 2.00, diametral.
+mag_d      = 4.00
+mag_t      = 2.00
+mag_grow   = 0.30   # mm — its pocket, from the back of the boss: a snug push
+                    #      (PETG holes ~0.27 small); a drop of glue if loose
+mag_floor  = 0.6    # mm — boss left between the pocket and the pin's bore
+# AS5600 AYWHP board, measured 2026-11-12 (+0.04): 22.90 x 23.45 x 1.66 PCB,
+# 3.25 over the chip (chip side 1.59), nothing on the back, chip centred,
+# 4 screw holes 3.50 in from both edges, pins in two rows (4 and 3) parallel
+# to the 22.90 sides, 4.43 in from them. Laid with 22.90 across (x), the pin
+# rows run across, above and below the chip. Chip side toward the magnet.
+as_w, as_h = 22.90, 23.45   # mm — x, z
+as_pcb     = 1.66
+as_chip    = 3.25 - 1.66    # mm — chip side, PCB face to the chip's top
+as_hole_in = 3.50   # mm — screw holes in from both edges
+as_hole_d  = 3.0    # mm — NOT MEASURED: typical; posts take M2 self-tappers
+as_air     = 0.8    # mm — magnet face to chip top (AS5600 wants 0.5-3)
+as_post_d  = 5.0    # mm — two posts at the LOWER holes, M2 pilots; the upper
+                    #      holes stay free (the output gear sweeps there)
+
+# ── Clearances and walls ────────────────────────────────────────────────────
+clr      = 0.5   # mm — general clearance between parts that do not touch
+pack_gap = 0.5   # mm — between neighbouring servos in the pinwheel, at least
+wall_t   = 3.0   # mm — wall plate (and deck) thickness
+col_w_max = 7.5  # mm — corner columns of the frame, square: this, or as big as
+                 #      the servo gear passing the corner lets them
+screw_in = 4.0   # mm — deck screws in from both outer edges (margin round the
+                 #      countersunk head)
+col_foot_w = 7.0 # mm — each column's free end, where the other deck's M3 screw
+col_foot_h = 8.5 #      goes in, widens to this square for this long, under it a
+                 #      45 deg flare from the column: a 5.1 column left the M3
+                 #      pilot breaking out of its inner faces (user, 2026-10-20).
+                 #      7.0 clears the modules sliding out (0.34); 7.5 does not.
+                 #      As long as the M3 pilot (8) plus 0.5: at 5 the pilot broke
+                 #      out under the foot (slicer: floating bits, 2026-10-20)
+foot_clear = 0.3 # mm — the walls' corners are notched round the feet
+# A lip behind the wall plate's edges, from the frame, so the plate gap does not
+# show through and the plate stops on it going in. It cannot stop a module
+# coming OUT. At the gears' height the side lips break off: the servo gear
+# passes there (and with one deck part a column's side faces a servo-gear side
+# on one wall or another).
+lip_w = 1.2      # mm — how far the lip reaches in behind the plate's edge
+lip_t = 1.0      # mm — its thickness, behind the plate
+lip_gap_z = 20.2 # mm — side lips stop within this of the wall centre (v3: 8.4 in
+                 #      v2; the (-24,-16) Technic pin's boss sits there now)
+plate_gap = 0.2  # mm — wall plate to columns and decks
+# The wall plate is SQUARE (user, 2026-10-17): every side is framed by a band
+# as wide as a column — the columns at the sides, a skirt of each deck at top
+# and bottom. v1 trapped every edge in a groove; v2 has none, so the module
+# slides out through its window.
+skirt_in = 1.5   # mm — the decks' skirt reaches this far inside the wall plate
+# Walls held by two screws through the face, at two grid corners on one
+# diagonal (WALL_SCREWS): M2x6 countersunk into bosses that rise from the
+# decks behind the wall. The decks stay ONE part: the top deck is the
+# bottom one turned over, which takes each wall's lower-corner boss to the
+# opposite wall's upper corner on the other diagonal.
+WALL_SCREW_AT = (-2, -2)  # grid steps (x, z) of the bottom deck's boss; the top
+                          #      deck's lands at (+2, +2) on every wall
+ws_boss_w   = 5.0   # mm — boss width (measured room: 5 wide clears the module
+                    #      sliding out by 0.6, 2026-10-20)
+ws_boss_d   = 3.5   # mm — boss depth behind the wall (more meets the next wall
+                    #      at the upper corner)
+ws_head_d   = 3.8   # mm — M2 countersunk head
+ws_clear    = 2.2   # mm — M2 clearance through the wall
+
+# ── Output: a printed hub with a Technic cross hole, no bearings ────────────
+# Two parts, captured by the wall alone: the HUB comes in from outside, its
+# flange sitting in a counterbore flush with the face (it cannot go in); the
+# GEAR is pressed onto the hub's hex from inside (it cannot come out — its
+# face meets the wall). The hub turns in a plain hole.
+hub_d      = 10.0   # mm — hub diameter, runs in the wall
+hub_clear  = 0.2    # mm — radial clearance: hole 10.4. Printed OD comes ~+0.07 (PETG cross,
+                    #      4.6 -> 4.67 avg of 10, 2026-10-15) and a turning fit wants +0.3 (T1.1)
+hub_recess = 0.2    # mm — flange face below the outer face, so it never rubs
+flange_d   = 14.0   # mm — the flange is a 45 deg CONE (hub_d to flange_d), and so
+                    #      is its seat in the wall: a flat step printed as a ring
+                    #      in the air (strings, 2026-10-17); a cone prints clean
+                    #      and centres the hub
+hex_af     = 8.0    # mm — hub's hex spigot, across flats, through the gear
+hex_hole   = 8.1    # mm — gear's hex hole, AF (press). Flat faces barely shrink,
+                    #      unlike small round holes: 8.25 went on loose (tested
+                    #      2026-10-17); 8.1 against a ~8.07 printed spigot
+
+# ── LEGO Technic (LEGO's nominal sizes; the holes grow by hole_grow) ─────────
+tech_pitch   = 8.0    # mm — the grid
+tech_pin_d   = 4.8    # mm — pin hole
+tech_cb_d    = 6.2    # mm — counterbore at the outer face, for the pin's collar
+tech_cb_h    = 0.8    # mm
+tech_len     = 7.8    # mm — a beam's thickness: the boss's length. Counterbored
+                      #      0.8 at both ends like a beam; the pin goes 7.1 past
+                      #      its collar and its ridge clicks into the far one
+tech_boss_d  = 7.6    # mm — boss round each pin hole, inside the wall
+TECH_PINS    = [(2, 1), (2, -1), (-3, -2)]   # v3: clear of the servo, the gears
+                      # and the AS5600 posts; (-2, +-1) hit the servo gear
+                      # pin holes in grid steps (x, z) from the output: two
+                      # under it at +-8 and one in the upper corner on the
+                      # servo gear's side (user, 2026-10-20). The top row and
+                      # the +16 column put the pin's tip into the neighbour
+                      # servo; the other corners take the wall screws
+TECH_SHORT   = {}     # mm — bosses cut short where a full 7.8 won't fit
+tech_cross   = 4.8    # mm — axle's cross, tip to tip
+tech_cross_w = 1.8    # mm — width of its arms
+cross_try    = []     # extra hubs to print with other cross grows (PETG)
+hole_grow    = 0.10   # mm — on holes that take LEGO parts: what printed holes lose
+                      #      (PLA, arcs off: the 6.0 socket printed 5.90)
+pin_grow     = hole_grow   # mm — LEGO pin holes (PETG: measured, below)
+
+# ── Holes (calibrated in PLA, test-status T1.1, 2026-10) ────────────────────
+m2_pilot   = 1.6    # mm — M2 self-tapping pilot (as the v6 servo cradle)
+m3_pilot   = 3.0    # mm — M3 self-tapping pilot (T1.1: 3.0 in PLA; 2.5 needed
+                    #      the holes opened up by hand, 2026-10-17)
+m3_clear   = 3.3    # mm
+
+# ── Servo mounting posts (from the wall plate down to the tabs) ─────────────
+post_gap   = 0.3    # mm — post to the servo case's end
+post_step  = 4.0    # mm — height of the lower post's step under the gear
+
+# Cable passage through the decks (kept from v2; the brain box is gone:
+# battery and boards now live INSIDE the 72 mm cube).
+cable_hole = (-7.0, -0.5, -5.0, 5.0)   # mm — x0, x1, y0, y1, inside the pack's hole
+if MATERIAL == "PETG":   # fit coupon in PETG, arcs off, scarf seam (2026-10-20):
+                         # press +0.05, sliding +0.25; holes print ~0.27 small
+    hub_clear = 0.125        # hub's hole: sliding, +0.25 on the diameter
+    hole_grow = 0.10         # LEGO axle's cross: 4.90 / 1.90. The coupon's 4.97
+                             #      was too loose in the hub (6.5 deep); of two hubs,
+                             #      4.92 and 4.87, the 4.87 won (2026-10-21), but
+                             #      three more at 4.87 came out too tight
+                             #      (2026-10-28): prints scatter, take the middle
+    pin_grow = 0.15          # LEGO pin holes: on the Technic coupon (2026-10-20)
+                             #      4.95 felt most like a real beam (5.00 close)
+    horn_hub_grow += 0.05    # horn hub's press fit — an estimate, to confirm
+    m2_pilot = 1.7           # M2 self-tapping: PETG holes print small (M3 needed
+                             #      3.1 in PETG, 3.0 in PLA: T1.2)
+    ws_clear = 2.4
+    # M3 pilots stay 3.0: in the PETG decks (2026-10-20) they went in just right
+elif MATERIAL != "PLA":
+    raise ValueError(f"MATERIAL must be PLA or PETG, not {MATERIAL!r}")
+
+EXPORT_STL = True
+RUN_CHECKS = None   # None: checks when headless, skipped in the GUI
+
+# ═══════════════════════════════════════════════════════════════════
+# DERIVED GEOMETRY  (everything for the north module, +Y wall)
+# ═══════════════════════════════════════════════════════════════════
+
+r_pitch = g_mod * g_z / 2.0
+r_tip   = r_pitch + g_mod
+a_mesh  = 2 * r_pitch                  # centre distance, equal gears
+
+# The pinwheel. Its square is (tower height + thickness + gap); each servo's
+# tower top is on the pack's edge, its base against the neighbour's side. The
+# servo shaft must sit exactly one centre distance off the wall centre, so the
+# gap opens up to whatever that asks.
+# v3: the cube's side is FIXED; the gear slab and wall set the tower top, and
+# the gear's centre distance sets the servo across the wall. The servos no
+# longer touch: a gap opens between each base and its neighbour.
+_stack  = max(g_gap + g_w_min + g_gap,
+              horn_lift + horn_hub_h + horn_grow + g_gap - (wall_t - wall_min))
+y_tower = cube_side / 2.0 - wall_t - _stack     # tower top
+sv_x0   = -(a_mesh + sv_case_t / 2.0)   # north servo: X from sv_x0 ...
+sv_x1   = sv_x0 + sv_case_t             # ... to sv_x1
+pack_half = y_tower
+y_base  = y_tower - sv_tower_h          # = -pack_half + thickness + gap
+y_tab0  = y_base + sv_tab_z0
+y_tab1  = y_tab0 + sv_tab_t
+
+# Vertical: the shaft at the case's LOWER end, at z = 0 (the output's height).
+x_sv    = (sv_x0 + sv_x1) / 2.0         # shaft: centred in the thickness
+case_z0 = -sv_shaft_end
+case_z1 = case_z0 + sv_case_len
+tab_z0  = case_z0 - sv_tab_out
+tab_z1  = case_z1 + sv_tab_out
+
+# Radial stack, from the pack outward: gear slab, wall. The horn stands
+# taller than a plain gear slab, so the servo gear's CENTRE (a boss inside its
+# root circle) stands proud toward the wall and sits in a shallow recess in
+# the wall's inner face. The wall goes as far out as that recess needs to
+# leave wall_min behind it; the gears' teeth widen to fill the slab.
+y_g0    = y_tower + g_gap               # gear slab, inner face
+y_horn  = y_tower + horn_lift + horn_hub_h      # horn top
+y_sg1   = y_horn + horn_grow                    # servo gear boss, outer face
+y_wi    = max(y_g0 + g_w_min + g_gap,           # wall inner face
+              y_sg1 + g_gap - (wall_t - wall_min))
+y_g1    = y_wi - g_gap                  # gear slab, outer face
+g_w     = y_g1 - y_g0                   # gears' face width
+sg_boss_r = r_pitch - 1.25 * g_mod             # boss = the gear's root circle
+sg_recess = max(0.0, y_sg1 + g_gap - y_wi)      # wall recess behind the boss
+y_wo    = y_wi + wall_t                 # wall outer face = cube half side
+half_in = y_wi                          # cube centre to a wall's inner face
+
+# Shafts in the wall plane (x, z).
+S_xz = (x_sv, 0.0)                      # servo shaft
+O_xz = (0.0, 0.0)                       # output, wall centre
+Q_xz = (a_mesh * math.cos(math.radians(sg_dir)),
+        a_mesh * math.sin(math.radians(sg_dir)))   # sensor gear
+
+# Sensor stack, from the gear slab inward: boss, magnet in its back, air, chip, PCB.
+y_sb    = y_g0 - sn_boss_l              # boss's back face = magnet's face
+y_chip  = y_sb - as_air                 # chip top
+y_pcbf  = y_chip - as_chip              # PCB, chip side
+y_pcbb  = y_pcbf - as_pcb               # PCB, back
+AS_HOLES = [(Q_xz[0] + sx * (as_w / 2.0 - as_hole_in), Q_xz[1] + sz * (as_h / 2.0 - as_hole_in))
+            for sz in (-1, 1) for sx in (-1, 1)]       # lower two first
+
+
+# Tab holes (on the shaft's line, near each tab's tip).
+tab_hole_z = (tab_z0 + sv_tab_hole, tab_z1 - sv_tab_hole)
+
+# Corner columns of the frame occupy |x|,|y| in [col_in, y_wo].
+col_w  = min(col_w_max, y_wo - (abs(x_sv) + r_tip + clr))
+col_in = y_wo - col_w
+lim_x  = col_in - plate_gap             # wall plate half width
+TECH_XZ = [(ix * tech_pitch, iz * tech_pitch) for ix, iz in TECH_PINS]
+TECH_DEPTH = [TECH_SHORT.get(p, tech_len) for p in TECH_PINS]
+WS_LOW = (WALL_SCREW_AT[0] * tech_pitch, WALL_SCREW_AT[1] * tech_pitch)
+WALL_SCREWS = [WS_LOW, (-WS_LOW[0], -WS_LOW[1])]   # bottom deck's, top deck's
+assert all(max(abs(x), abs(z)) + tech_cb_d / 2.0 < lim_x for x, z in TECH_XZ),     "pin holes off the plate"
+
+# ═══════════════════════════════════════════════════════════════════
+# HELPERS
+# ═══════════════════════════════════════════════════════════════════
+
+def v(x, y, z):
+    return App.Vector(x, y, z)
+
+
+X_AXIS, Y_AXIS, Z_AXIS = v(1, 0, 0), v(0, 1, 0), v(0, 0, 1)
+ORIGIN = v(0, 0, 0)
+
+
+def box(x0, x1, y0, y1, z0, z1):
+    return Part.makeBox(x1 - x0, y1 - y0, z1 - z0, v(x0, y0, z0))
+
+
+def cyl_y(x, z, r, y0, y1):
+    """Cylinder along Y at (x, z), from y0 to y1."""
+    return Part.makeCylinder(r, y1 - y0, v(x, y0, z), Y_AXIS)
+
+
+def cyl_z(x, y, r, z0, z1):
+    return Part.makeCylinder(r, z1 - z0, v(x, y, z0), Z_AXIS)
+
+
+def add(doc, name, shape, color=(0.8, 0.8, 0.8), transparency=0):
+    obj = doc.addObject("Part::Feature", name)
+    obj.Shape = shape
+    if HAS_GUI and obj.ViewObject is not None:
+        obj.ViewObject.ShapeColor = color
+        obj.ViewObject.Transparency = transparency
+    return obj
+
+
+def _inv(a):
+    return math.tan(a) - a
+
+
+def gear_outline(z, m, phase):
+    """Involute spur gear outline, (u, w) points in its own plane, closed.
+    `phase` is the angle of tooth 0's centre line."""
+    alpha = math.radians(g_alpha)
+    r = m * z / 2.0
+    ra, rf, rb = r + m, r - 1.25 * m, r * math.cos(alpha)
+    psi_p = math.pi / (2 * z) + _inv(alpha)      # half-tooth angle at the base
+    r0 = max(rb, rf)
+    flank = []
+    n = 8
+    for i in range(n + 1):
+        rho = r0 + (ra - r0) * i / n
+        a_rho = math.acos(min(1.0, rb / rho))
+        flank.append((rho, psi_p - _inv(a_rho)))
+    if rf < rb:
+        flank.insert(0, (rf, flank[0][1]))
+    pts = []
+    for k in range(z):
+        th = phase + 2 * math.pi * k / z
+        for rho, psi in flank:                    # right flank, root -> tip
+            pts.append((rho * math.cos(th - psi), rho * math.sin(th - psi)))
+        psi_tip = flank[-1][1]
+        for j in range(1, 4):                     # tip land
+            t = th - psi_tip + 2 * psi_tip * j / 4
+            pts.append((ra * math.cos(t), ra * math.sin(t)))
+        for rho, psi in reversed(flank):          # left flank, tip -> root
+            pts.append((rho * math.cos(th + psi), rho * math.sin(th + psi)))
+        psi_root = flank[0][1]
+        t0, t1 = th + psi_root, th + 2 * math.pi / z - psi_root
+        for j in range(1, 4):                     # root land
+            t = t0 + (t1 - t0) * j / 4
+            pts.append((rf * math.cos(t), rf * math.sin(t)))
+    return pts
+
+
+def make_gear(cx, cz, phase, y0, y1, bore=None):
+    pts = [v(cx + u, y0, cz + w) for u, w in gear_outline(g_z, g_mod, phase)]
+    face = Part.Face(Part.makePolygon(pts + [pts[0]]))
+    g = face.extrude(v(0, y1 - y0, 0))
+    if bore is not None:
+        g = g.cut(bore)
+    return g
+
+
+def mesh_phase(phase_a, za, a_xz, b_xz, zb):
+    """Phase for gear B so it meshes with A (external mesh): a tooth of A at
+    theta + e (theta = direction A->B) meets a GAP of B at theta + pi - e*za/zb."""
+    th = math.atan2(b_xz[1] - a_xz[1], b_xz[0] - a_xz[0])
+    pitch_a = 2 * math.pi / za
+    e = (phase_a - th) % pitch_a
+    if e > pitch_a / 2:
+        e -= pitch_a
+    return th + math.pi - e * za / zb + math.pi / zb
+
+
+# ═══════════════════════════════════════════════════════════════════
+# PARTS — north module
+# ═══════════════════════════════════════════════════════════════════
+
+def make_servo():
+    """MG90D envelope, standing: case, gear tower at the shaft (lower) end,
+    tab plate with its two holes, spline."""
+    case = box(sv_x0, sv_x1, y_base, y_base + sv_case_h, case_z0, case_z1)
+    tower = box(sv_x0, sv_x1, y_base + sv_case_h - 0.01, y_tower,
+                case_z0, case_z0 + sv_tower_len)
+    tabs = box(sv_x0, sv_x1, y_tab0, y_tab1, tab_z0, tab_z1)
+    for hz in tab_hole_z:
+        tabs = tabs.cut(cyl_y(x_sv, hz, sv_tab_hole_d / 2.0, y_tab0 - 1, y_tab1 + 1))
+    spline = cyl_y(x_sv, 0.0, sv_spline_d / 2.0, y_tower - 0.01,
+                   y_tower + sv_spline_h)
+    return case.fuse([tower, tabs, spline]).removeSplitter()
+
+
+def _horn(grow, y_top_extra=0.0):
+    """The horn (or, grown, its pocket): hub + two arms along X, arms flush
+    with the hub's top. y_top_extra lifts the pocket's top through the gear."""
+    y0 = y_horn - horn_hub_h
+    hub_g = grow if grow == 0.0 else horn_hub_grow
+    hub = cyl_y(x_sv, 0.0, horn_hub_d / 2.0 + hub_g, y0 - grow, y_horn + y_top_extra)
+    half = horn_arm_len / 2.0 + grow
+    arms = box(x_sv - half, x_sv + half, y_horn - horn_arm_t - grow,
+               y_horn + y_top_extra, -horn_arm_w / 2.0 - grow, horn_arm_w / 2.0 + grow)
+    return hub.fuse(arms)
+
+
+def make_horn():
+    h = _horn(0.0).removeSplitter()
+    return h.cut(cyl_y(x_sv, 0.0, sv_spline_d / 2.0, y_tower - 1, y_horn - 1.0))
+
+
+def make_servo_gear():
+    """Servo gear, with the horn's shape as a pocket right through it.
+    Printed flat, the SERVO side down (its floor with the spline hole on the
+    bed, the boss up), so the horn's pocket opens upward."""
+    g = make_gear(S_xz[0], S_xz[1], PH_S, y_g0, y_g1)
+    if y_sg1 > y_g1:
+        g = g.fuse(cyl_y(x_sv, 0.0, sg_boss_r, y_g1 - 0.01, y_sg1)).removeSplitter()
+    g = g.cut(_horn(horn_grow, 1.0))
+    # The spline passes through the floor under the horn; that floor is also
+    # what stops the horn sliding through toward the servo.
+    return g.cut(cyl_y(x_sv, 0.0, sv_spline_d / 2.0 + clr, y_g0 - 1, y_sg1))
+
+
+def hex_y(af, y0, y1):
+    """Hexagonal prism along Y on the wall centre, `af` across flats, flats
+    top and bottom."""
+    r = af / math.sqrt(3.0)
+    pts = [v(r * math.cos(math.radians(60 * k)), y0, r * math.sin(math.radians(60 * k)))
+           for k in range(6)]
+    return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(0, y1 - y0, 0))
+
+
+def make_output_gear():
+    """Output gear, pressed onto the hub's hex. Printed flat."""
+    return make_gear(0, 0, PH_O, y_g0, y_g1, hex_y(hex_hole, y_g0 - 1, y_g1 + 1))
+
+
+def make_output_hub(grow=None):
+    """Hub: conical flange (flush in the wall's conical seat), round part
+    turning in the wall, hex spigot through the gear, Technic cross hole. PETG —
+    the torque crosses the layers. Printed flange down."""
+    y_c0 = _hub_cone_y0()
+    flange = Part.makeCone(hub_d / 2.0, flange_d / 2.0, y_wo - hub_recess - y_c0,
+                           v(0, y_c0, 0), Y_AXIS)
+    hub = cyl_y(0, 0, hub_d / 2.0, y_g1 - 0.01, y_c0 + 0.01)
+    spigot = hex_y(hex_af, y_g0, y_g1)
+    h = flange.fuse([hub, spigot]).removeSplitter()
+    gr = hole_grow if grow is None else grow
+    return h.cut(cross_y(tech_cross + gr, tech_cross_w + gr,
+                         y_wo - cross_depth(), y_wo + 1))
+
+
+def _hub_cone_y0():
+    """Where the hub's 45 deg flange cone starts (its narrow end)."""
+    return y_wo - hub_recess - (flange_d - hub_d) / 2.0
+
+
+def _post_step(y0, y1, z0, z_narrow, z_wide, x1=None):
+    """The lower post's tab end: full height (z0..z_wide) at the tab, its top
+    sloping down at 45 deg to the narrow part's top (z_narrow) where it meets
+    the part that runs under the gear — so the wall prints it, outer face
+    down, without an overhang. The slope stays on the tab's side: toward the
+    gear there is no room."""
+    yk = y1 - (z_wide - z_narrow)                # where the slope starts
+    pts = [v(sv_x0, y0, z0), v(sv_x0, y1, z0), v(sv_x0, y1, z_narrow),
+           v(sv_x0, yk, z_wide), v(sv_x0, y0, z_wide)]
+    return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(
+        v((sv_x1 if x1 is None else x1) - sv_x0, 0, 0))
+
+
+def make_wall():
+    """The wall module: flat plate, the output's hole, two servo posts, the
+    Technic pin holes on bosses. One part, printed outer face down."""
+    plate = box(-lim_x, lim_x, y_wi, y_wo, -lim_x, lim_x)     # square
+    # Tab posts. Upper: straight up to the wall. Lower: the servo gear sweeps
+    # through its path, so it stops short of the gear slab, steps down and
+    # runs to the wall UNDER the gear's tip.
+    pz0, pz1 = tab_z0, case_z0 - post_gap
+    y_stop = y_g0 - clr
+    z_under = -r_tip - clr                      # top of the step, under the gear
+    z_low = z_under - post_step
+    lx1 = min(sv_x1, Q_xz[0] - as_w / 2.0 - clr)   # v3: beside the AS5600 board
+    posts = [box(sv_x0, sv_x1, y_tab1, y_wi + 0.01, case_z1 + post_gap, tab_z1),
+             _post_step(y_tab1, y_stop, min(pz0, z_low), z_under, pz1, lx1),
+             box(sv_x0, lx1, y_stop - 0.01, y_wi + 0.01, z_low, z_under)]
+    # v3: the sensor gear's pin, and the AS5600's four posts
+    posts.append(cyl_y(Q_xz[0], Q_xz[1], sn_pin_d / 2.0, y_sb + mag_t + mag_floor + 0.3,
+                       y_wi + 0.01))
+    for hx, hz in AS_HOLES[:2]:
+        posts.append(cyl_y(hx, hz, as_post_d / 2.0, y_pcbf, y_wi + 0.01))
+    lbosses = [cyl_y(cx, cz, tech_boss_d / 2.0, y_wo - d, y_wi + 0.01)
+               for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH)]
+    w = plate.fuse(posts + lbosses).removeSplitter()
+    # Notch every corner of the plate round the columns' feet: their own shape,
+    # 45 deg flare and all, grown by foot_clear (a square notch left a
+    # triangle open at the flare, 2026-10-20).
+    for sx in (1, -1):
+        for top in (True, False):
+            w = w.cut(_col_foot(sx, 1, top, foot_clear))   # north wall's corners
+    # Recess behind the servo gear's boss.
+    if sg_recess > 0:
+        w = w.cut(cyl_y(x_sv, 0.0, sg_boss_r + clr, y_wi - 1, y_wi + sg_recess))
+    # Output: the hub's plain bearing hole, with a 45 deg conical seat for its
+    # flange (hub_clear off the flange's cone all round).
+    w = w.cut(cyl_y(0, 0, hub_d / 2.0 + hub_clear, y_wi - 1, y_wo + 1))
+    y_c0 = _hub_cone_y0()
+    h_c = y_wo + 0.5 - y_c0
+    w = w.cut(Part.makeCone(hub_d / 2.0 + hub_clear, hub_d / 2.0 + hub_clear + h_c,
+                            h_c, v(0, y_c0, 0), Y_AXIS))
+    for hx, hz in AS_HOLES[:2]:                 # board screws, from behind
+        w = w.cut(cyl_y(hx, hz, m2_pilot / 2.0, y_pcbf - 1, y_pcbf + 6.0))
+    # Servo screws: M2 pilots up the posts.
+    for hz in tab_hole_z:
+        w = w.cut(cyl_y(x_sv, hz, m2_pilot / 2.0, y_tab1 - 1, y_tab1 + 6.0))
+    # The two wall screws: clearance and a 90 deg countersink from the face.
+    for cx, cz in WALL_SCREWS:
+        w = w.cut(cyl_y(cx, cz, ws_clear / 2.0, y_wi - 1, y_wo + 1))
+        h = ws_head_d / 2.0 + 0.1
+        w = w.cut(Part.makeCone(h, 0.0, h, v(cx, y_wo + 0.001, cz), v(0, -1, 0)))
+    # Technic pin holes, one module deep, the collar's counterbore at the face.
+    for (cx, cz), d in zip(TECH_XZ, TECH_DEPTH):
+        w = w.cut(cyl_y(cx, cz, (tech_pin_d + pin_grow) / 2.0,
+                        y_wo - d - 1, y_wo + 1))
+        w = w.cut(cyl_y(cx, cz, (tech_cb_d + pin_grow) / 2.0,
+                        y_wo - tech_cb_h, y_wo + 1))
+        # ...and at the boss's inner end, as on a LEGO beam's far face: the
+        # pin's ridge clicks into it (the pin goes 7.1 past its collar)
+        if d >= tech_len:
+            w = w.cut(cyl_y(cx, cz, (tech_cb_d + pin_grow) / 2.0,
+                            y_wo - tech_len - 1, y_wo - tech_len + tech_cb_h))
+    return w
+
+
+def make_sensor_gear():
+    """Sensor gear: the output's twin, meshing under it, on the wall's pin;
+    a boss behind with the magnet's pocket. Printed teeth face down."""
+    g = make_gear(Q_xz[0], Q_xz[1], PH_Q, y_g0, y_g1)
+    g = g.fuse(cyl_y(Q_xz[0], Q_xz[1], sn_boss_r, y_sb, y_g0 + 0.01)).removeSplitter()
+    g = g.cut(cyl_y(Q_xz[0], Q_xz[1], (sn_pin_d + sn_bore) / 2.0,
+                    y_sb + mag_t + mag_floor, y_g1 + 1))
+    return g.cut(cyl_y(Q_xz[0], Q_xz[1], (mag_d + mag_grow) / 2.0, y_sb - 1, y_sb + mag_t))
+
+
+def make_magnet():
+    return cyl_y(Q_xz[0], Q_xz[1], mag_d / 2.0, y_sb, y_sb + mag_t)
+
+
+def make_as5600():
+    """The AS5600 board: PCB with its four holes, the chip on the axis."""
+    b = box(Q_xz[0] - as_w / 2.0, Q_xz[0] + as_w / 2.0, y_pcbb, y_pcbf,
+            Q_xz[1] - as_h / 2.0, Q_xz[1] + as_h / 2.0)
+    for hx, hz in AS_HOLES:
+        b = b.cut(cyl_y(hx, hz, as_hole_d / 2.0, y_pcbb - 1, y_pcbf + 1))
+    chip = box(Q_xz[0] - 2.5, Q_xz[0] + 2.5, y_pcbf - 0.01, y_chip,
+               Q_xz[1] - 2.0, Q_xz[1] + 2.0)
+    return b.fuse(chip)
+
+
+# Inside the cube (ghosts, to check the room): the LiPo flat over the servo
+# pack, the brain's boards under it, inside the AS5600 boards' square.
+battery = (52.0, 33.55, 10.24)  # CITYORK 103450, measured
+board_box = (44.0, 44.0, 8.0)   # PLACEHOLDER: one board, C3 + DAOKAI + TCA9548A + gyro
+
+
+def make_battery():
+    L, W, H = battery
+    z0 = tab_z1 + clr
+    return box(-L / 2, L / 2, -W / 2, W / 2, z0, z0 + H)
+
+
+def make_main_board():
+    X, Y, H = board_box
+    z0 = -half_in + clr
+    return box(-X / 2, X / 2, -Y / 2, Y / 2, z0, z0 + H)
+
+
+def cross_y(span, arm, y0, y1):
+    """A Technic cross along Y on the wall centre."""
+    a = box(-span / 2.0, span / 2.0, y0, y1, -arm / 2.0, arm / 2.0)
+    b = box(-arm / 2.0, arm / 2.0, y0, y1, -span / 2.0, span / 2.0)
+    return a.fuse(b).removeSplitter()
+
+
+def cross_depth():
+    """The output's cross hole: down the hub, a floor left at the gear."""
+    return y_wo - y_g0 - 0.6
+
+
+def make_tech_pin(cx, cz):
+    """Ghost of a LEGO friction pin in a wall hole: its inner half in the
+    hole, its outer half where a beam would sit, the collar between."""
+    pin = cyl_y(cx, cz, tech_pin_d / 2.0, y_wo - tech_len, y_wo + tech_len)
+    return pin.fuse(cyl_y(cx, cz, tech_cb_d / 2.0 - 0.1, y_wo - tech_cb_h + 0.05,
+                          y_wo + tech_cb_h - 0.05))
+
+
+def make_tech_axle():
+    """Ghost of a LEGO axle in the output, as deep as the cross hole."""
+    return cross_y(tech_cross, tech_cross_w, y_wo - cross_depth(), y_wo + 2 * tech_len)
+
+
+def make_deck():
+    """One deck — top and bottom are the SAME part. Drawn as the bottom one:
+    a plate with a skirt round its edges (framing the walls' bottom edges),
+    a boss behind each wall for its lower screw, two full-height corner
+    columns on one diagonal and two countersunk M3 holes
+    on the other. The top deck is this part turned over
+    (180 deg about X): its columns come down onto the bottom one's holes and
+    the other way round. Four M3x10 countersunk, two from each face, into
+    pilots in the column ends."""
+    d = box(-y_wo, y_wo, -y_wo, y_wo, -y_wo, -half_in)
+    cxy = y_wo - screw_in
+    for sx, sy in ((1, 1), (-1, -1)):            # columns
+        x0, x1 = sorted((sx * col_in, sx * y_wo))
+        y0, y1 = sorted((sy * col_in, sy * y_wo))
+        d = d.fuse(box(x0, x1, y0, y1, -half_in - 0.01, half_in))
+        d = d.fuse([_col_foot(sx, sy, top) for top in (True, False)])
+        d = d.cut(cyl_z(sx * cxy, sy * cxy, m3_pilot / 2.0, half_in - 8.0,
+                        half_in + 1))
+    bx, bz = WS_LOW
+    for rot in (0, 90, 180, 270):
+        # The skirt along this edge: frames the wall plate's bottom edge, a
+        # column's width from the outer face.
+        sk = box(-col_in, col_in, y_wi - skirt_in, y_wo, -half_in - 0.01, -col_in)
+        # The wall screw's boss: from the deck up behind the wall, against its
+        # inner face, an M2 pilot along the screw.
+        bs = box(bx - ws_boss_w / 2.0, bx + ws_boss_w / 2.0, y_wi - ws_boss_d, y_wi,
+                 -half_in - 0.01, bz + ws_boss_w / 2.0)
+        pilot = cyl_y(bx, bz, m2_pilot / 2.0, y_wi - ws_boss_d - 1, y_wi + 0.01)
+        # Lip behind the plate's bottom edge.
+        lp = [box(-col_in, col_in, y_wi - lip_t, y_wi, -col_in - 0.01,
+                  -(lim_x - lip_w))]
+        # ...and behind its side edges, on the columns this deck carries.
+        for sx in (1, -1):
+            corner = v(sx * col_in, y_wo, 0)
+            corner = App.Rotation(Z_AXIS, rot).multVec(corner)
+            if corner.x * corner.y > 0:          # this deck's columns: x*y > 0
+                x_in, x_col = sx * (lim_x - lip_w), sx * (col_in + 0.3)
+                lp.append(box(*sorted((x_in, x_col)), y_wi - lip_t, y_wi,
+                              -(lim_x - lip_w), -lip_gap_z))
+                # The upper stretch starts in mid air on the deck as printed:
+                # it grows out of the column on a 45 deg underside instead.
+                pts = [v(x_col, y_wi - lip_t, lip_gap_z - (col_in + 0.3 - lim_x + lip_w)),
+                       v(x_in, y_wi - lip_t, lip_gap_z), v(x_in, y_wi - lip_t, lim_x - lip_w),
+                       v(x_col, y_wi - lip_t, lim_x - lip_w)]
+                lp.append(Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(v(0, lip_t, 0)))
+        for part in [sk, bs, pilot] + lp:
+            part.rotate(ORIGIN, Z_AXIS, rot)
+        d = d.fuse([sk, bs] + lp).cut(pilot)
+    # Room for the OTHER deck's column feet: at the corners where this deck
+    # has no column, the other deck's columns land with their 7.0 feet over
+    # this skirt and lip (2026-10-20: they would not seat).
+    for sx, sy in ((1, -1), (-1, 1)):
+        room = _col_foot(sx, sy, False, foot_clear)
+        room = room.common(box(-y_wo - 1, y_wo + 1, -y_wo - 1, y_wo + 1, -half_in, 0))
+        d = d.cut(room)          # above the plate only: the column lands on it
+    d = d.cut(box(*cable_hole, -y_wo - 1, -half_in + 1))   # cables up to the brain
+    for sx, sy in ((1, -1), (-1, 1)):            # countersunk holes
+        x, y = sx * cxy, sy * cxy
+        d = d.cut(cyl_z(x, y, m3_clear / 2.0, -y_wo - 1, -half_in + 1))
+        d = d.cut(Part.makeCone(3.2, m3_clear / 2.0, 1.6,
+                                v(x, y, -y_wo - 0.001), Z_AXIS))
+    return d.removeSplitter()
+
+
+def _col_foot(sx, sy, top=True, grow=0.0):
+    """A widened end of a column: a col_foot_w square, col_foot_h long, a 45
+    deg flare toward the column's middle. The free (top) end takes the other
+    deck's M3 screw; the one at the base just fills the walls' corner
+    notches, so every corner of every wall is closed. `grow` enlarges it all
+    round: the walls' notches are this shape grown by foot_clear."""
+    W, a0 = col_foot_w + grow, col_w + grow
+    c = W - a0
+    k = 1 if top else -1                         # built along +z, no mirror
+    z_end, z_in = k * (half_in + grow), k * (half_in - col_foot_h - grow)
+    sq = box(*sorted((sx * (y_wo - W), sx * y_wo)), *sorted((sy * (y_wo - W), sy * y_wo)),
+             *sorted((z_in, z_end)))
+
+    def ring(a, z):
+        x_in, y_in = sx * (y_wo - a), sy * (y_wo - a)
+        x_out, y_out = sx * y_wo, sy * y_wo
+        pts = [v(x_in, y_in, z), v(x_out, y_in, z), v(x_out, y_out, z), v(x_in, y_out, z)]
+        return Part.makePolygon(pts + [pts[0]])
+    flare = Part.makeLoft([ring(a0, z_in - k * c), ring(W, z_in + k * 0.01)], True)
+    return sq.fuse(flare)
+
+
+def deck_top(deck):
+    s = deck.copy()
+    s.rotate(ORIGIN, X_AXIS, 180)
+    return s
+
+
+# Gear phases: servo gear arbitrary, the rest follow the mesh.
+PH_S = 0.0
+PH_O = mesh_phase(PH_S, g_z, S_xz, O_xz, g_z)
+PH_Q = mesh_phase(PH_O, g_z, O_xz, Q_xz, g_z)
+
+# ═══════════════════════════════════════════════════════════════════
+# ASSEMBLY
+# ═══════════════════════════════════════════════════════════════════
+
+# (name, rotation about Z). All four modules identical.
+WALLS = [("N", 0), ("W", 90), ("S", 180), ("E", 270)]
+
+MODULE = [("Wall", make_wall(), (0.95, 0.75, 0.30), 0),
+          ("Servo", make_servo(), (0.20, 0.35, 0.80), 0),
+          ("ServoGear", make_servo_gear(), (0.90, 0.90, 0.90), 0),
+          ("Horn", make_horn(), (0.95, 0.95, 0.95), 0),
+          ("OutputGear", make_output_gear(), (0.90, 0.90, 0.90), 0),
+          ("OutputHub", make_output_hub(), (0.85, 0.45, 0.20), 0),
+          ("SensorGear", make_sensor_gear(), (0.80, 0.90, 0.80), 0),
+          ("Magnet", make_magnet(), (0.60, 0.60, 0.65), 0),
+          ("AS5600", make_as5600(), (0.15, 0.50, 0.25), 0)]
+MODULE += [(f"TechPin{i}", make_tech_pin(cx, cz), (0.15, 0.30, 0.75), 50)
+           for i, (cx, cz) in enumerate(TECH_XZ)]
+MODULE.append(("TechAxle", make_tech_axle(), (0.25, 0.25, 0.25), 50))
+
+
+def place(shape, rot):
+    """A copy rotated onto its wall about Z. Rotations only, never a mirror;
+    always from a fresh copy (Shape.rotate mutates in place)."""
+    s = shape.copy()
+    if rot:
+        s.rotate(ORIGIN, Z_AXIS, rot)
+    return s
+
+
+PARTS = []   # (name, shape, color, transparency)
+for wname, rot in WALLS:
+    for pname, sh, col, tr in MODULE:
+        PARTS.append((f"{pname}_{wname}", place(sh, rot), col, tr))
+DECK = make_deck()
+PARTS.append(("DeckBottom", DECK, (0.45, 0.55, 0.75), 60))
+PARTS.append(("DeckTop", deck_top(DECK), (0.45, 0.55, 0.75), 60))
+PARTS.append(("Battery", make_battery(), (0.85, 0.20, 0.20), 40))
+PARTS.append(("MainBoard", make_main_board(), (0.15, 0.50, 0.25), 40))
+
+DOC_NAME = "Animo_v3"
+if App.ActiveDocument and App.ActiveDocument.Name == DOC_NAME:
+    App.closeDocument(DOC_NAME)
+doc = App.newDocument(DOC_NAME)
+for n, sh, col, tr in PARTS:
+    add(doc, n, sh, col, tr)
+
+# Tree groups: one per wall (its module, servo and all), one for the frame,
+# so each can be shown or hidden at once (select the group, Space).
+WALL_LABEL = {"N": "Pared N", "W": "Pared O", "S": "Pared S", "E": "Pared E"}
+_groups = {}
+for _obj in list(doc.Objects):
+    if _obj.TypeId != "Part::Feature":
+        continue
+    _w = _obj.Name.rsplit("_", 1)[-1] if "_" in _obj.Name else ""
+    _label = WALL_LABEL.get(_w, "Marco")
+    if _obj.Name.startswith(("Battery", "MainBoard")):
+        _label = "Interior (fantasmas)"
+    if _obj.Name.startswith("Tech"):
+        _label = "LEGO (fantasmas)"
+    if _label not in _groups:
+        _groups[_label] = doc.addObject("App::DocumentObjectGroup",
+                                        "G_" + _label.replace(" ", "_"))
+        _groups[_label].Label = _label
+    _groups[_label].addObject(_obj)
+doc.recompute()
+if HAS_GUI and getattr(App, "GuiUp", 0):
+    Gui.SendMsgToActiveView("ViewFit")
+    Gui.activeDocument().activeView().viewIsometric()
+
+# ── Printable parts to STL (north module's frame; orient in the slicer) ─────
+if EXPORT_STL:
+    _here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() \
+        else App.getUserMacroDir(True)
+    _pdir = os.path.join(_here, "stl", "animo_v3", MATERIAL)
+    os.makedirs(_pdir, exist_ok=True)
+    _by = dict((n, sh) for n, sh, c, t in MODULE)
+    for _n in ("Wall", "ServoGear", "OutputGear", "OutputHub", "SensorGear"):
+        _by[_n].exportStl(os.path.join(_pdir, f"animo_v3_{_n}.stl"))
+    DECK.exportStl(os.path.join(_pdir, "animo_v3_Deck.stl"))
+    for _gr in cross_try:
+        make_output_hub(_gr).exportStl(os.path.join(
+            _pdir, f"animo_v3_OutputHub_X{round((tech_cross + _gr) * 100)}.stl"))
+
+# ═══════════════════════════════════════════════════════════════════
+# CHECKS
+# ═══════════════════════════════════════════════════════════════════
+
+if RUN_CHECKS is None:
+    RUN_CHECKS = not getattr(App, "GuiUp", 0)
+
+# Pairs that are MEANT to touch or nest (prefix match, same wall).
+ALLOWED = {("Horn", "Servo"),             # horn on the spline
+           ("Horn", "ServoGear"),         # horn in its pocket
+           ("SensorGear", "OutputGear"),  # meshing
+           ("AS5600", "Wall"),             # on its posts (contact)
+           ("ServoGear", "OutputGear"),                        # meshing
+           ("OutputHub", "OutputGear"),                        # pressed hex
+           ("TechPin", "Wall"),                                # in its hole
+           ("TechAxle", "OutputHub")}                          # in the cross
+
+
+def _allowed(a, b):
+    pa, wa = a.rsplit("_", 1) if "_" in a else (a, "")
+    pb, wb = b.rsplit("_", 1) if "_" in b else (b, "")
+    if wa != wb:
+        return False
+    for x, y in ALLOWED:
+        if (pa.startswith(x) and pb.startswith(y)) or \
+           (pa.startswith(y) and pb.startswith(x)):
+            return True
+    return False
+
+
+if RUN_CHECKS:
+    checks = []
+    bad = []
+    names = [p[0] for p in PARTS]
+    shapes = [p[1] for p in PARTS]
+    for i in range(len(PARTS)):
+        for j in range(i + 1, len(PARTS)):
+            if _allowed(names[i], names[j]):
+                continue
+            bi, bj = shapes[i].BoundBox, shapes[j].BoundBox
+            if not bi.intersect(bj):
+                continue
+            vol = shapes[i].common(shapes[j]).Volume
+            if vol > 1e-3:
+                bad.append((names[i], names[j], vol))
+
+    by = dict((p[0], p[1]) for p in PARTS)
+
+    def gap(a, b):
+        return by[a].distToShape(by[b])[0]
+
+    d_so = math.hypot(S_xz[0], S_xz[1])
+    checks.append(("servo gear - output centre distance", d_so, f"= {a_mesh:.2f}",
+                   abs(d_so - a_mesh) < 1e-6))
+    d_q = math.hypot(Q_xz[0] - O_xz[0], Q_xz[1] - O_xz[1])
+    checks.append(("sensor gear - output centre distance", d_q, f"= {a_mesh:.2f}",
+                   abs(d_q - a_mesh) < 1e-6))
+    checks.append(("cube side", 2 * y_wo, f"= {cube_side}", abs(2 * y_wo - cube_side) < 1e-6))
+    checks.append(("magnet face to chip", y_sb - y_chip, "0.5 - 3", 0.5 <= y_sb - y_chip <= 3))
+    for a, b, tgt in (("Servo_N", "Servo_E", "> 0, pinwheel neighbours"),
+                      ("Servo_N", "Servo_W", "> 0"),
+                      ("Servo_N", "Servo_S", "> 0, opposite"),
+                      ("Servo_E", "ServoGear_N", "> 0, the one along the wall"),
+                      ("Servo_E", "OutputGear_N", "> 0"),
+                      ("ServoGear_N", "Wall_N", "> 0, in its recess, over the post"),
+                      ("Horn_N", "Wall_N", "> 0, the wall keeps the horn on"),
+                      ("ServoGear_N", "Servo_N", "> 0, off the tower"),
+                      ("ServoGear_N", "OutputHub_N", "> 0"),
+                      ("OutputGear_N", "Wall_N", "> 0"),
+                      ("Wall_N", "Servo_E", "> 0, posts"),
+                      ("Wall_N", "Wall_E", "> 0, corner"),
+                      ("Servo_N", "DeckTop", "> 0"),
+                      ("Servo_N", "DeckBottom", "> 0"),
+                      ("Servo_E", "DeckTop", "> 0, corner column"),
+                      ("Servo_W", "DeckBottom", "> 0, corner column"),
+                      ("AS5600_N", "Servo_E", "> 0, the servo along the wall"),
+                      ("AS5600_N", "Servo_N", "> 0"),
+                      ("SensorGear_N", "ServoGear_N", "> 0"),
+                      ("SensorGear_N", "Wall_N", "> 0, turns on its pin"),
+                      ("Magnet_N", "AS5600_N", "> 0"),
+                      ("Battery", "Servo_N", "> 0"),
+                      ("Battery", "DeckTop", "> 0"),
+                      ("MainBoard", "AS5600_N", "> 0"),
+                      ("MainBoard", "DeckBottom", "> 0")):
+        g = gap(a, b)
+        checks.append((f"gap {a} / {b}", g, tgt, g > 0.05))
+    # The pins' inner halves stand inside the cube: clear of gears, servos,
+    # posts and the other walls.
+    for i, (cx, cz) in enumerate(TECH_XZ):
+        n = f"TechPin{i}_N"
+        g = min(gap(n, o) for o in names
+                if o != n and o != "Wall_N" and not o.startswith("Tech"))
+        checks.append((f"{n} at ({cx:+.0f}, {cz:+.0f}): pin clear of everything", g,
+                       "> 0.3", g > 0.3))
+    checks.append(("column foot longer than the M3 pilot (8)", col_foot_h, "> 8",
+                   col_foot_h > 8.0))
+    left = col_foot_w - screw_in - m3_pilot / 2.0
+    checks.append(("column foot: plastic round the M3 pilot, inner faces", left,
+                   ">= 1.0", left >= 1.0))
+    checks.append(("output's cross hole depth", cross_depth(), ">= 6, a good grip",
+                   cross_depth() >= 6.0))
+    # A wall comes out without opening the cube: the north module slides out
+    # along +Y past everything that stays (decks, their bosses, the others).
+    stay = [n for n in names if not n.endswith("_N") and not n.startswith("Tech")]
+    hits = set()
+    for m in ("Wall_N", "Servo_N", "ServoGear_N", "Horn_N", "OutputGear_N",
+              "OutputHub_N", "SensorGear_N", "Magnet_N", "AS5600_N"):
+        for dy in range(1, 32, 2):
+            sh = by[m].copy()
+            sh.translate(v(0, dy, 0))
+            for o in stay:
+                if sh.BoundBox.intersect(by[o].BoundBox) and                         sh.common(by[o]).Volume > 1e-3:
+                    hits.add(f"{m}/{o}")
+    checks.append((f"north module slides out 31 mm{': ' + ', '.join(sorted(hits)) if hits else ''}",
+                   len(hits), "0 parts in the way", not hits))
+
+    hole = 2 * (a_mesh - sv_case_t / 2.0)
+    print("=" * 72)
+    print("Animo v3 — 72 mm autonomous cube, LEGO Technic faces, pinwheel, 1:1 gears, AS5600")
+    print("-" * 72)
+    for label, value, target, ok in checks:
+        print(f"  [{'OK ' if ok else 'FAIL'}] {label}:  {value:.3f}  ({target})")
+    if bad:
+        for a, b, vol in bad:
+            print(f"  [FAIL] interference {a} / {b}: {vol:.3f} mm3")
+    else:
+        print(f"  [OK ] no interference among {len(PARTS)} parts"
+              " (designed contacts excepted)")
+    print("-" * 72)
+    print(f"  MATERIAL {MATERIAL}: STLs in stl/animo_v3/{MATERIAL}/")
+    print(f"  CUBE side {2 * y_wo:.1f} mm  (inside {2 * half_in:.1f}, walls {wall_t:.1f})")
+    print(f"  Faces FLAT, LEGO Technic: output = cross hole {tech_cross + hole_grow:.2f} /"
+          f" {tech_cross_w + hole_grow:.2f}, {cross_depth():.1f} deep, in a Ø{flange_d:.0f} flange;")
+    print(f"    {len(TECH_XZ)} pin holes Ø{tech_pin_d + pin_grow:.2f} x {tech_len} (short:"
+          f" {TECH_SHORT}) on"
+          f" Ø{tech_boss_d} bosses, counterbore Ø{tech_cb_d + pin_grow:.2f} x {tech_cb_h},"
+          f" at (x, z) = {', '.join(f'({x:+.0f},{z:+.0f})' for x, z in TECH_XZ)}")
+    print(f"  Deck screws {screw_in:.1f} mm in from the edges: {screw_in - 3.2:.1f} mm"
+          f" round the countersunk head; corner columns {col_w:.1f} square, their free"
+          f" ends {col_foot_w:.1f} for {col_foot_h:.0f} mm (45 deg flare)")
+    print(f"  Hole through the middle of the pack: {hole:.1f} x {hole:.1f} mm (wiring)")
+    print(f"  Servo shaft {abs(x_sv):.2f} mm off the wall centre, at the output's height")
+    print(f"  Gears: 2 x z{g_z} m{g_mod}, Ø{2 * r_pitch:.1f} pitch, Ø{2 * r_tip:.1f}"
+          f" tip, {g_w:.1f} wide, 1:1")
+    print(f"  Hub (PETG) from outside, 45 deg flange in a conical seat; gear pressed on its"
+          f" hex {hex_af:.0f} AF from inside;")
+    print(f"    turns in a Ø{hub_d + 2 * hub_clear:.1f} hole: no bearings, no shaft,"
+          f" captured by the wall alone (axial play {g_gap:.1f})")
+    print("  PRINTED per cube: Deck x2 (the same part, one turned over), and per wall:")
+    print("           Wall (outer face down), ServoGear, OutputGear, OutputHub (PETG)")
+    print("  PURCHASED per wall: MG90D or MG90S 360,")
+    print("           2x M2 tab screws, 2x M2x6 countersunk (wall);  per cube: 4x M3x10"
+          " countersunk;  LEGO friction pins")
+    print(f"  Servo gear holds the servo's horn (arms CUT to {horn_arm_len:.0f} mm), no"
+          f" horn screw; its centre boss Ø{2 * sg_boss_r:.1f} stands {y_sg1 - y_g1:.2f} proud,")
+    print(f"    the wall recessed {sg_recess:.2f} mm behind it"
+          f" (wall left there {wall_t - sg_recess:.2f} mm)")
+    print(f"  Square walls ({2 * lim_x:.1f}), no tongues: each module slides out through its"
+          f" window; 2 x M2x6 countersunk at (x, z) = {WALL_SCREWS} into deck bosses")
+    print(f"  SENSOR: gear z{g_z} 1:1 at {sg_dir:.0f} deg round the output, on a Ø{sn_pin_d:.0f} pin; magnet Ø{mag_d} x {mag_t}"
+          f" in its boss; AS5600 on 2 posts (lower holes), PCB y {y_pcbb:.2f}..{y_pcbf:.2f}, chip top {y_chip:.2f},"
+          f" air {y_sb - y_chip:.2f}")
+    print(f"  INSIDE: LiPo {battery[0]:.0f}x{battery[1]:.2f}x{battery[2]:.2f} over the pack"
+          f" (z {tab_z1 + clr:.1f}..{tab_z1 + clr + battery[2]:.1f}); boards (placeholder {board_box}) under it")
+    print("  OPEN: AS5600 hole Ø not measured (3.0 assumed); wiring; USB-C, switch; ports")
+    print("=" * 72)
+else:
+    print(f"Animo v3: geometry only, checks skipped. Cube side {2 * y_wo:.1f} mm")
