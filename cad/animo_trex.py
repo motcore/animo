@@ -1,7 +1,7 @@
 # Animo — the T-rex walker, v1: legs, feet and tail (the head comes later)
 # FreeCAD Python Macro
 #
-# The first model on the v2 cube (animo_v2_cube.py, 56 mm, brain on top).
+# The first model on the v2 cube (archive/animo_v2_cube.py, 56 mm, brain on top).
 # No LEGO parts (user, 2026-10-28): each part carries its own printed cross
 # spigot that goes straight into the output hub's cross hole.
 #
@@ -42,7 +42,7 @@ from FreeCAD import Vector
 
 MATERIAL = os.environ.get("ANIMO_MATERIAL", "PETG")
 
-# ── The cube (from animo_v2_cube.py) ────────────────────────────────────────
+# ── The cube (from archive/animo_v2_cube.py) ────────────────────────────────────────
 half       = 28.0    # mm — cube centre to a wall's outer face
 brain_top  = 56.0    # mm — the brain's lid, above the cube's centre
 hub_recess = 0.2     # mm — the hub's face, below the wall's face

@@ -5,7 +5,7 @@
 # notas/montaje-calibrar.md), so every wall turns the same for the same
 # command (firmware/cal.py):
 #   - DIAL: a disc held on the wall's face by two LEGO Technic pins in the
-#     two lower pin holes (+-8, -16 from the output; animo_v2_cube.py). Only
+#     two lower pin holes (+-8, -16 from the output; archive/animo_v2_cube.py). Only
 #     those two: they are symmetric, so the dial fits every wall one way and
 #     its 0 is always straight down. Grooves every 5 deg, longer every 15 and
 #     45; a dimple marks the + side (clockwise seen from outside).
@@ -25,7 +25,7 @@ from FreeCAD import Vector
 
 MATERIAL = os.environ.get("ANIMO_MATERIAL", "PETG")
 
-# ── The wall (from animo_v2_cube.py / animo_duck.py) ────────────────────────
+# ── The wall (from archive/animo_v2_cube.py / animo_duck.py) ────────────────────────
 hub_recess = 0.2     # mm — the hub's face, below the wall's face
 cross_hole = 6.54    # mm — the hub's cross hole, deep from the wall's face
 tech_pin_d = 4.8     # mm — Technic pin hole
