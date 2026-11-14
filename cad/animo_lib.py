@@ -14,9 +14,9 @@
 # not by version).
 #
 #   animo_lib.py            this file: sizes, helpers, the parts every face has
-#   animo_face_mg90d.py     face with a continuous MG90D (the one being built)
+#   animo_face_n20_worm.py  face with a worm N20 lying flat on its plate (being built)
 #   animo_face_n20.py       face with a straight N20 gearmotor
-#   animo_face_n20_worm.py  face with a worm N20 lying flat on its plate
+#   animo_face_mg90d.py     face with a continuous MG90D (set aside)
 #   animo_brick.py          the frame, which face goes on which side, checks
 #
 # Each face file opens on its own (a brick with four of that face);
@@ -30,8 +30,9 @@
 #   - output on a 6700ZZ (10 x 15 x 4) in a 5.6 wall, face flat; hub and gear
 #     joined by one M3 from inside, a short hex for the torque;
 #   - the model's coupling: a TRAPEZOID socket (a square with one side
-#     shorter) in the hub's face, one position, a click groove; ModelKey is
-#     the model's template part;
+#     shorter) in the hub's face, one position, torque only — no click: the
+#     Coremata holds its turning parts on itself; ModelKey is the model's
+#     template part;
 #   - double swing gear: two z12 swing gears on an arm dragged by the pinion
 #     (dry friction, no spring), the arm's stops are two wall posts; the
 #     firmware parks the arm in the middle, where the output turns free;
@@ -109,21 +110,19 @@ gb_boss_l = 4.0
 m3_head_d = 6.0     # mm — M3 countersunk head, 90 deg
 wall_t    = hub_recess + fl_t + fl_relief + brg_w   # 5.6: flush face, bearing in
 
-# ── The model's coupling: trapezoid socket + click ─────────────────────────
+# ── The model's coupling: trapezoid socket, torque only ────────────────────
 # A square with one side shorter (user, 2026-11-13; a D first, but a D puts the
 # torque on one small flat): four faces share the torque, one position only,
 # the firmware parks the output with the short side up.
+# No click (user, 2026-11-14): the coupling only turns the part; holding it on
+# the output is the Coremata's job — its own grip on the brick reaches round
+# the turning part (a wheel held from both sides, not overhung).
 key_a     = 4.6     # mm — the long side (down when parked)
 key_b     = 3.2     # mm — the short side (up)
 key_h     = 4.6     # mm — between them
 key_depth = 2.8     # mm — socket depth from the hub's face
 key_grow  = 0.15    # mm — socket over nominal (offset x 2)
 key_play  = 0.15    # mm — the model's spigot under nominal
-groove_at = 1.8     # mm — click groove's centre, down from the hub's face
-groove_w  = 0.6
-groove_d  = 0.3     # mm — how far it cuts into the socket's wall
-bump_h    = 0.25    # mm — the spigot's click bump
-slit_w    = 1.0     # mm — two slits across the spigot let it flex
 
 # ── Gears ───────────────────────────────────────────────────────────────────
 g_mod   = 0.8       # mm — module (prints with a 0.4 nozzle)
@@ -164,6 +163,17 @@ as_hole_in = 3.50
 as_hole_d = 3.60
 as_air    = 0.8     # mm — magnet face to chip top (AS5600 wants 0.5-3)
 as_post_d = 6.0     # mm — two posts at the holes farthest from the output
+# Its pins (measured 2026-11-12): two rows parallel to the 22.90 side, 4.43 in
+# from each of those edges, centred along them (assumed): 4 pins (VCC, OUT,
+# GND, DIR) and 3 (SCL, SDA, GPO). Both rows are needed (VCC, GND / SDA, SCL;
+# DIR bridged to GND). Wires soldered from behind: the board needs this much
+# free behind each row — solder, the bend, a sleeve (2026-11-14; the v3 room
+# was 4.1).
+as_row_in = 4.43
+as_pitch  = 2.54
+as_pin_pad = 1.2    # mm — round a pin: solder, a wire's end
+as_wire_back = 4.0  # mm — room behind each row
+as_scr_d, as_scr_h = 5.5, 1.8     # mm — the board's M3 screws, heads behind it
 post_in_d = 5.0     # mm — the posts' thin end, through the keeper, to the board
 post_big_d = 10.0   # mm — the posts, wall side of the keeper
 keeper_tube = 8.0
@@ -526,32 +536,22 @@ def trap_key(off, y0, y1):
 def make_output_hub():
     """Hub: the flange (the model's face), a ring on the inner ring only, the
     journal through the bearing, a short hex into the gear, the M3's pilot,
-    the trapezoid socket with its click groove. Printed flange down."""
+    the trapezoid socket. Printed flange down."""
     h = cyl_y(0, 0, fl_r, y_fl0, y_fl1).fuse([
         cyl_y(0, 0, brg_in_r, y_b1, y_fl0 + 0.01),
         cyl_y(0, 0, journal_d / 2.0, y_b0 - 0.01, y_b1 + 0.01),
         hex_y(hex_af, y_b0 - hex_len, y_b0 + 0.01)]).removeSplitter()
     h = h.cut(cyl_y(0, 0, m3_pilot / 2.0, y_b0 - hex_len - 1, y_key0 - 0.4))
-    h = h.cut(trap_key(key_grow / 2.0, y_key0, y_fl1 + 1))
-    yg = y_fl1 - groove_at
-    return h.cut(cyl_y(0, 0, key_r + key_grow / 2.0 + groove_d,
-                       yg - groove_w / 2.0, yg + groove_w / 2.0))
+    return h.cut(trap_key(key_grow / 2.0, y_key0, y_fl1 + 1))
 
 
 def make_model_key():
     """The model's side, a template part: disc in the counterbore, a plate 0.2
-    clear of the face with a 24 mm arm, the split trapezoid spigot."""
+    clear of the face with a 24 mm arm, the trapezoid spigot."""
     k = cyl_y(0, 0, fl_r - 0.2, y_fl1, y_wo + 0.2).fuse([
         cyl_y(0, 0, 8.0, y_wo + 0.2, y_wo + 2.2),
         box(-3.0, 3.0, y_wo + 0.2, y_wo + 2.2, 0.0, 24.0)])
     sp = trap_key(-key_play / 2.0, y_key0 + 0.2, y_fl1 + 0.01)
-    yg = y_fl1 - groove_at
-    sp = sp.fuse(trap_key(-key_play / 2.0 + bump_h, yg - groove_w / 2.0 + 0.1,
-                          yg + groove_w / 2.0 - 0.1))
-    for a in (0.0, 90.0):
-        sl = box(-slit_w / 2.0, slit_w / 2.0, y_key0, y_fl1 - 0.6, -5, 5)
-        sl.rotate(ORIGIN, Y_AXIS, a)
-        sp = sp.cut(sl)
     return k.fuse(sp).removeSplitter()
 
 
@@ -594,7 +594,22 @@ def make_as5600(L):
     b = box(Q[0] - as_w / 2.0, Q[0] + as_w / 2.0, y_pcbb, y_pcbf, Q[1] - as_h / 2.0, Q[1] + as_h / 2.0)
     for hx, hz in L.AS_HOLES:
         b = b.cut(cyl_y(hx, hz, as_hole_d / 2.0, y_pcbb - 1, y_pcbf + 1))
-    return b.fuse(box(Q[0] - 2.5, Q[0] + 2.5, y_pcbf - 0.01, y_chip, Q[1] - 2.0, Q[1] + 2.0))
+    b = b.fuse(box(Q[0] - 2.5, Q[0] + 2.5, y_pcbf - 0.01, y_chip, Q[1] - 2.0, Q[1] + 2.0))
+    return b.fuse(as5600_room(L)).removeSplitter()
+
+
+def as5600_room(L):
+    """What the board needs round it beyond its own shape: room behind both pin
+    rows for the wires, the screws' heads behind it."""
+    Q = L.Q
+    p = as_pin_pad
+    room = []
+    for zr, n in ((Q[1] + as_h / 2.0 - as_row_in, 4), (Q[1] - as_h / 2.0 + as_row_in, 4)):
+        w = (n - 1) / 2.0 * as_pitch + p
+        room.append(box(Q[0] - w, Q[0] + w, y_pcbb - as_wire_back, y_pcbb + 0.01, zr - p, zr + p))
+    for hx, hz in L.AS_HOLES[:2]:
+        room.append(cyl_y(hx, hz, as_scr_d / 2.0, y_pcbb - as_scr_h, y_pcbb + 0.01))
+    return room[0].fuse(room[1:])
 
 
 def common_parts(L):
@@ -900,8 +915,8 @@ def check(walls, parts, z_batt, board, slide_sides=None, title=""):
                    y_key0 - y_scr_end >= 0.4 - 1e-9))
     checks.append(("M3 thread in the hub", y_scr_end - (y_b0 - hex_len), ">= 4",
                    y_scr_end - (y_b0 - hex_len) >= 4.0 - 1e-9))
-    wd = journal_d / 2.0 - (key_r + key_grow / 2.0 + groove_d)
-    checks.append(("hub wall round the socket's groove", wd, ">= 1.5", wd >= 1.5 - 1e-9))
+    wd = journal_d / 2.0 - (key_r + key_grow / 2.0)
+    checks.append(("hub wall round the socket", wd, ">= 1.5", wd >= 1.5 - 1e-9))
     lip = brg_seat / 2.0 - (fl_r + cb_clear)
     checks.append(("bearing stops on the counterbore's floor", lip, ">= 0.5", lip >= 0.5))
     checks.append(("column foot longer than the M3 pilot (8)", col_foot_h, "> 8", col_foot_h > 8))
@@ -935,7 +950,7 @@ def check(walls, parts, z_batt, board, slide_sides=None, title=""):
     print(f"  CUBE {cube_side:.0f} mm: walls {wall_t:.1f}, decks {deck_t:.1f}; battery z {z_batt:.1f}.."
           f"{z_batt + battery[2]:.1f}; boards' room {board} x {board} x {board_h:.0f} on the bottom deck")
     print(f"  OUTPUT: 6700ZZ, hub flange Ø{2 * fl_r:.1f} flush, M3 x {m3_screw_l:.0f} countersunk"
-          f" from inside; trapezoid socket {key_a}/{key_b} x {key_h}, {key_depth} deep, click groove")
+          f" from inside; trapezoid socket {key_a}/{key_b} x {key_h}, {key_depth} deep")
     for W in {w.name: w for w in walls.values()}.values():
         L = W.L
         print(f"  {W.name}: shaft {L.d:.1f} off the output at {math.degrees(math.atan2(L.S[1], L.S[0])):.0f}"

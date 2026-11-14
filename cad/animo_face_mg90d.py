@@ -1,4 +1,7 @@
-# Animo face — continuous MG90D + double swing gear (the wall being built)
+# Animo face — continuous MG90D + double swing gear
+# SET ASIDE (user, 2026-11-14): the next face's servo and its sleeve pass 0.5-1.7
+# behind this face's AS5600, no room for its wires (it was 4.1 with a 3.0 wall;
+# the bearing's 5.6 wall took it). The worm N20 face is the one being built.
 # FreeCAD Python Macro. Opens a brick with four of this face; animo_brick.py mixes
 # face types. What every wall shares (plate, bearing output, trapezoid
 # coupling, swing gears, sensor, frame) lives in animo_lib.py.

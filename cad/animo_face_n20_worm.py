@@ -1,4 +1,5 @@
-# Animo face — worm N20 lying flat on the wall + double swing gear
+# Animo face — worm N20 lying flat on its plate + double swing gear (the one
+# being built, user 2026-11-14)
 # FreeCAD Python Macro. Opens a brick with four of this face; animo_brick.py mixes
 # face types. The shared parts live in animo_lib.py.
 #
@@ -55,7 +56,7 @@ d_out    = 17.5     # mm — shaft to output: the mount clears the output gear's
                     #      (the M3's thread) by 0.3
 z_pin    = 10
 pin_hub_d = 6.0
-sg_dir   = -40.0    # deg — so the AS5600 board clears the motor's rails
+sg_dir   = -50.0    # deg — the AS5600 clears the motor's rails, and its wires the next face's motor
 stop_r   = None     # no stop posts: they would stand where the battery goes
 stop_ang = None
 slot_r   = 6.5      # mm — the stop: a pin on the mount in an arc slot of the arm,
