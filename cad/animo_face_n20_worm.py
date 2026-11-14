@@ -1,5 +1,4 @@
-# Animo face — worm N20 lying flat on its plate + double swing gear (the one
-# being built, user 2026-11-14)
+# Animo face — worm N20 lying flat on its plate + double swing gear
 # FreeCAD Python Macro. Opens a brick with four of this face; animo_brick.py mixes
 # face types. The shared parts live in animo_lib.py.
 #

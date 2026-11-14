@@ -6,8 +6,8 @@
 # stl/animo_brick/.
 #
 # Face types (one file each, see animo_lib.py for what they share):
-#   "n20_worm"  animo_face_n20_worm.py  worm N20 lying flat on its plate (the one being built)
-#   "n20"       animo_face_n20.py       straight N20
+#   "n20"       animo_face_n20.py       straight N20 (the one being built)
+#   "n20_worm"  animo_face_n20_worm.py  worm N20 lying flat on its plate
 #   "mg90d"     animo_face_mg90d.py     continuous MG90D (set aside)
 #
 # ANIMO_MIX=1 (headless) instead tries every type on the north face against
@@ -29,7 +29,7 @@ if _HERE not in sys.path:
 import animo_lib as lib          # noqa: E402
 importlib.reload(lib)
 
-CUBE = {"N": "n20_worm", "W": "n20_worm", "S": "n20_worm", "E": "n20_worm"}
+CUBE = {"N": "n20", "W": "n20", "S": "n20", "E": "n20"}
 
 FILES = {"mg90d": "animo_face_mg90d", "n20": "animo_face_n20", "n20_worm": "animo_face_n20_worm"}
 

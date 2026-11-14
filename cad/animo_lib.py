@@ -14,8 +14,8 @@
 # not by version).
 #
 #   animo_lib.py            this file: sizes, helpers, the parts every face has
-#   animo_face_n20_worm.py  face with a worm N20 lying flat on its plate (being built)
-#   animo_face_n20.py       face with a straight N20 gearmotor
+#   animo_face_n20.py       face with a straight N20 gearmotor (being built)
+#   animo_face_n20_worm.py  face with a worm N20 lying flat on its plate
 #   animo_face_mg90d.py     face with a continuous MG90D (set aside)
 #   animo_brick.py          the frame, which face goes on which side, checks
 #
