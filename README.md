@@ -75,4 +75,4 @@ press fit +0.05, sliding fit +0.25 (drawn hole minus drawn pin).
 
 ## Licences
 
-Hardware: [CERN-OHL-P-2.0](LICENSE-HARDWARE.md) · Software: [MIT](LICENSE-SOFTWARE.md) · Docs: [CC BY-SA 4.0](LICENSE-DOCS.md)
+Hardware: [CERN-OHL-S-2.0](LICENSE-HARDWARE.md) · Software: [MIT](LICENSE-SOFTWARE.md) · Docs: [CC BY-SA 4.0](LICENSE-DOCS.md)
