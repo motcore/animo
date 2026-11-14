@@ -12,7 +12,7 @@ Motcore, many models.
 face  →  brick  →  Motcore  →  Coremata
 ```
 
-- **Face**: one side's module — a motor, a sensor, a battery, a blank. The
+- **Face**: one side's module — a motor, a blank, later a screen or a sensor. The
   unit you swap.
 - **Brick**: the frame, a 72 mm cube that four faces slide into.
 - **Motcore**: one or more bricks with their faces — a configuration.
