@@ -8,7 +8,7 @@
 # side of the output; a z10 pinion on its D shaft gives 1.8:1 to the output.
 # Its mount: a plate between the gearbox face and the arm, a sleeve round the
 # gearbox, 2 x M1.6 countersunk into the gearbox face, screwed to the two stop
-# posts. Driven by a DRV8833 (one per two walls), from the 5 V rail.
+# posts. Driven by its own DRV8833 on the face (see below), from the 5 V rail.
 # Reference motor: Pololu #3065, 6V HPCB 100:1 (330 rpm, 1.6 kg.cm stall
 # extrapolated at 6 V); a generic "N20 6V 300 rpm" for ~3 EUR. Sizes from
 # Pololu, not measured: + 0.04 once one is here.
@@ -45,6 +45,22 @@ n20_scr_pitch = 9.0 # mm — two M1.6 holes in the gearbox face, along Z
 n20_scr_d  = 1.9
 sleeve_len = 8.0    # mm — sleeve along the gearbox (9 long)
 shaft_fit  = 0.05   # mm — pinion's D bore over the shaft (PETG press)
+
+# ── The face's H-bridge (user, 2026-11-14: a driver on every face) ──────────
+# DRV8833 module (DollaTek, Amazon B07ML2RDNY: 18.5 x 16, 3-10 V, 1.5 A per
+# bridge), wired as PWM + direction (IN1 = PWM, inverted when IN2 = DIR is 1).
+# On the plate there is no room for it (gears, the next face, the battery), so
+# it rides BEHIND the AS5600 (user's idea): taped to a printed tray that hangs
+# from the AS5600's own two screws on spacer tubes. The room it keeps: tape,
+# the board, its parts and the soldered wires.
+drv_w, drv_h = 18.5, 16.0
+drv_tape  = 1.0     # mm — foam tape
+drv_pcb   = 1.6
+drv_room  = 4.0     # mm — parts and the soldered wires, toward the AS5600
+drv_gap   = 0.5     # mm — clear of the AS5600's wire room
+drv_up    = 3.0     # mm — up from the AS5600's centre: the spacers pass under it
+tray_t    = 1.2
+tube_d    = 5.5     # mm — spacer tubes round the AS5600's M3s
 
 # ── Where it sits ───────────────────────────────────────────────────────────
 n20_dir  = 150.0    # deg — up and to the side, away from the sensor and the boards
@@ -102,17 +118,48 @@ def make_mount():
     return m
 
 
+_drv_y1 = lib.y_pcbb - lib.as_wire_back - drv_gap
+_drv_y0 = _drv_y1 - drv_room - drv_pcb - drv_tape
+
+
+def make_driver():
+    cx, cz = L.Q[0], L.Q[1] + drv_up
+    return box(cx - drv_w / 2.0, cx + drv_w / 2.0, _drv_y0, _drv_y1, cz - drv_h / 2.0, cz + drv_h / 2.0)
+
+
+def make_tray():
+    """The driver's tray: a plate behind it, and two spacer tubes up to the
+    AS5600's back on its two screws (longer M3s, through tube and board)."""
+    cx, cz = L.Q[0], L.Q[1] + drv_up
+    b = 1.0
+    y0 = _drv_y0 - tray_t
+    t = box(cx - drv_w / 2.0 - b, cx + drv_w / 2.0 + b, y0, _drv_y0, cz - drv_h / 2.0 - b, cz + drv_h / 2.0 + b)
+    parts = []
+    for hx, hz in L.AS_HOLES[:2]:
+        parts.append(cyl_y(hx, hz, tube_d / 2.0, y0, lib.y_pcbb))
+        parts.append(bar_xz((hx, cz), (hx, hz), tube_d, y0, _drv_y0))
+    t = t.fuse(parts).removeSplitter()
+    for hx, hz in L.AS_HOLES[:2]:
+        t = t.cut(cyl_y(hx, hz, 1.7, y0 - 1, lib.y_pcbb + 1))
+    return t
+
+
 def wall():
     return lib.WallType(
         "n20", L,
         [("N20", make_n20(), (0.75, 0.75, 0.80), 0),
          ("Pinion", make_pinion(), (0.90, 0.90, 0.90), 0),
-         ("MotorMount", make_mount(), (0.95, 0.60, 0.20), 0)],
-        allowed={("Pinion", "N20"), ("MotorMount", "N20")},
-        motor_names=("N20", "MotorMount"),
-        printed=("Pinion", "MotorMount"),
-        notes=("straight N20 pointing inward, z10 pinion (1.8:1); DRV8833 per two walls",),
-        buy=("N20 6V ~100:1", "2 x M1.6 countersunk (N20)", "2 x M2 (mount)"))
+         ("MotorMount", make_mount(), (0.95, 0.60, 0.20), 0),
+         ("Driver", make_driver(), (0.80, 0.15, 0.15), 50),
+         ("DriverTray", make_tray(), (0.95, 0.60, 0.20), 0)],
+        allowed={("Pinion", "N20"), ("MotorMount", "N20"), ("DriverTray", "Driver"),
+                 ("DriverTray", "AS5600")},
+        motor_names=("N20", "MotorMount", "Driver", "DriverTray"),
+        printed=("Pinion", "MotorMount", "DriverTray"),
+        notes=("straight N20 pointing inward, z10 pinion (1.8:1); DRV8833 on the face, PWM + DIR",),
+        buy=("GA12-N20 6V 150 rpm (~100:1)", "DRV8833 module + foam tape",
+             "2 x M3 x 20 for the AS5600 (through the tray's tubes)", "2 x M1.6 countersunk (N20)",
+             "2 x M2 (mount)"))
 
 
 if not getattr(sys, "_animo_importing", False):
